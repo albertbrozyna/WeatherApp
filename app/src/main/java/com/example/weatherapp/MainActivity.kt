@@ -18,9 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Button
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.weatherapp.ui.theme.WeatherAppTheme
+import kotlinx.coroutines.launch
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
 fun WeatherScreen() {
     var city = remember { mutableStateOf("") }
     var temperature = remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -62,7 +65,9 @@ fun WeatherScreen() {
 
         Button(
             onClick = {
-                temperature.value = "22°C"
+                coroutineScope.launch {
+                    temperature.value = fetchWeatherData(city.value)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -99,8 +104,17 @@ interface WeatherAPI {
     ) : WeatherResponse
 }
 
-fun fetchWeatherData(){
-    val weatherAPI = WeatherApiClient.weatherAPI
+suspend fun fetchWeatherData(city :String) : String{
+    try{
+        val weatherAPI = WeatherApiClient.weatherAPI
+        val response = weatherAPI.getWeatherByCity(city, "880c3b528650d9c1fbb39efcbd7e6fb3")
+
+        return "${response.main.temp}°C"
+    }catch (e : Exception){
+        e.printStackTrace()
+        return "Error fetching weather data"
+    }
+
 }
 
 @Preview(showBackground = true)

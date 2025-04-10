@@ -41,9 +41,10 @@ android {
 
 dependencies {
 
+
+    implementation(libs.logging.interceptor)
     implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    implementation(libs.retrofit2.converter.gson) // Zależność do GSON Converter
+    implementation(libs.retrofit2.converter.gson)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

@@ -1,9 +1,21 @@
 package com.example.weatherapp
 
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object WeatherApiClient{
+
+    // Tworzymy Logging Interceptor
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY // Możesz ustawić inne poziomy: NONE, BASIC, HEADERS
+    }
+
+    // Tworzymy OkHttpClient z LoggingInterceptor
+    private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor)
+        .build()
 
     private const val URL = "https://api.openweathermap.org/"
 
