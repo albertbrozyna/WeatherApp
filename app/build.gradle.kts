@@ -41,7 +41,7 @@ android {
 
 dependencies {
 
-
+    implementation(libs.coil.compose)
     implementation(libs.logging.interceptor)
     implementation(libs.retrofit)
     implementation(libs.retrofit2.converter.gson)
