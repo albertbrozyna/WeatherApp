@@ -1,12 +1,35 @@
 package com.example.weatherapp
 
+import android.content.Context
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 @Composable
 fun WeatherForecastScreen(){
+    var city = remember { mutableStateOf("") }
+    var weatherForecast = remember { mutableStateOf<WeatherForecast?>(null) }
+    val context: Context = LocalContext.current
+    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
+    var showFavorites = remember { mutableStateOf(false) }
 
+    CitiesSection(favoriteCities, showFavorites,city,context)
+
+    Button(
+        onClick = { weatherForecast = WeatherForecastAPI.getWeatherForecastByCity}
+    ){
+
+    }
+
+}
+
+
+@Composable
+fun WeekDaysForecast(){
 
 }
 

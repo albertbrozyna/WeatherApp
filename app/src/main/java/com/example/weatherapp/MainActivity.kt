@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -46,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,10 +64,12 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle as TxtStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.weatherapp.ui.theme.BottomNavigationBar
 import com.google.gson.annotations.SerializedName
 import org.intellij.lang.annotations.JdkConstants
 import java.io.File
@@ -103,53 +107,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun BottomNavigationBar(selectedScreen : MutableState<Int>) {
-
-    NavigationBar(
-        modifier = Modifier.padding(16.dp),
-    ) {
-        NavigationBarItem(
-            onClick = {selectedScreen.value = 0},
-            selected = selectedScreen.value == 0,
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = "Home"
-                )
-            },
-            label = {Text("Home")}
-
-        )
-        NavigationBarItem(
-            onClick = {selectedScreen.value = 1},
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.FavoriteBorder,
-                    contentDescription = "Weather forecast",
-
-                )
-            },
-            selected = selectedScreen.value == 1,
-            label = {Text("Weather forecast")}
-        )
-
-
-        NavigationBarItem(
-            onClick = {selectedScreen.value = 2},
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings"
-                )
-
-            },
-            selected = selectedScreen.value == 2,
-            label = {Text("Settings")}
-        )
-    }
-}
-
 
 @Composable
 fun WeatherScreen() {
@@ -167,7 +124,7 @@ fun WeatherScreen() {
             .padding(16.dp)
     ) {
 
-        CitiesSection(favoriteCities, showFavorites,city,context)
+        CitiesSection(favoriteCities, showFavorites, city, context)
 
         //Button to get weather
         Button(
@@ -200,15 +157,21 @@ fun WeatherScreen() {
 
                 }
             },
-            modifier = Modifier.fillMaxWidth().padding(start = 6.dp,top = 8.dp,end = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 6.dp, top = 8.dp, end = 6.dp),
             shape = RoundedCornerShape(6.dp)
         ) {
-            Text("Get Weather")
+            Text("Get Weather", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         }
 
         //Is loading text
         if (isLoading.value) {
-            Text("Is Loading")
+            Text("Loading...",
+                textAlign = TextAlign.Center,
+                fontSize = 30.sp,
+                modifier = Modifier.padding(top = 20.dp)
+            )
         } else {
             weatherResponse.value?.let {
                 WeatherInfo(it)
@@ -217,10 +180,7 @@ fun WeatherScreen() {
 
         //Error message
         error.value?.let {
-            Text(
-                text = it,
-                modifier = Modifier.padding(16.dp)
-            )
+            Toast.makeText(context,it,Toast.LENGTH_LONG).show()
         }
 
     }
@@ -228,16 +188,20 @@ fun WeatherScreen() {
 
 
 @Composable
-fun WeatherInfo(weatherResponse: WeatherResponse){
+fun WeatherInfo(weatherResponse: WeatherResponse) {
     val iconCode = weatherResponse.weather.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
 
 
-    Column(modifier = Modifier.padding(16.dp).fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
             weatherResponse.name,
-            fontSize = 24.sp,
+            fontSize = 40.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -246,53 +210,109 @@ fun WeatherInfo(weatherResponse: WeatherResponse){
         AsyncImage(
             model = iconUrl,
             contentDescription = "Weather Icon",
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier
+                .size(60.dp)
+                .padding(bottom = 8.dp)
         )
 
 
-        Text("${weatherResponse.main.temp}°C",
-            fontSize = 24.sp,
+        Text(
+            "${weatherResponse.main.temp}°C",
+            fontSize = 38.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center)
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
 
-        Text("Description: ${weatherResponse.weather.firstOrNull()?.description ?: ""}",
-            fontSize = 18.sp,
+        Text(
+            weatherResponse.weather.firstOrNull()?.description ?: "",
+            fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center)
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
 
 
-        Text("Time: ${formatTime(weatherResponse.dt)}")
+        Text(
+            text = formatTime(weatherResponse.dt),
+            textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+            fontSize = 26.sp,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
 
-        Text("Coordinates: ${weatherResponse.coord.longitude}, ${weatherResponse.coord.latitude}")
-        Text("Pressure: ${weatherResponse.main.pressure}")
-        Text("Humidity: ${weatherResponse.main.pressure}")
-        Text("Wind Speed: ${weatherResponse.wind.speed} m/s")
-        Text("Wind Direction: ${weatherResponse.wind.deg}°")
+        Row(horizontalArrangement = Arrangement.Center) {
+            Text(
+                "Pressure:\n${weatherResponse.main.pressure}",
+                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
 
-        Spacer(modifier = Modifier.padding(8.dp))
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                "Humidity:\n${weatherResponse.main.humidity}",
+                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+        }
 
 
+        Text(
+            "Coordinates:\n${weatherResponse.coord.longitude}, ${weatherResponse.coord.latitude}",
+            textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+
+        HorizontalDivider(thickness = 0.7.dp, color = Color.White)
+
+        Row(modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center){
+            Text(
+                "Wind Speed:\n ${weatherResponse.wind.speed} m/s",
+
+                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+
+            VerticalDivider(thickness = 0.5.dp, color = Color.White)
+
+            Text(
+                "Wind Direction:\n ${weatherResponse.wind.deg}°",
+                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+        }
     }
 }
 
 
-
 @Composable
-fun CitiesSection(favoriteCities : MutableState<List<String>>,
-                  showFavorites : MutableState<Boolean>,
-                  city : MutableState<String>,
-                  context :Context ) {
+fun CitiesSection(
+    favoriteCities: MutableState<List<String>>,
+    showFavorites: MutableState<Boolean>,
+    city: MutableState<String>,
+    context: Context
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
 
-    ){
+        ) {
         //Favorities list
         if (showFavorites.value) {
 
 
-            Text("Favourite cities:",
-                modifier = Modifier.padding(8.dp))
+            Text(
+                "Favourite cities:",
+                modifier = Modifier.padding(8.dp)
+            )
 
             favoriteCities.value.forEach { cityName ->
 
@@ -329,16 +349,21 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
             }
         }
 
-        Row(modifier = Modifier
-            .fillMaxWidth().height(56.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
-        ){
+        ) {
             //Textfield to input cities
             TextField(
                 value = city.value,
                 onValueChange = { city.value = it },
-                label = { Text("City") },
-                modifier = Modifier.weight(8f).padding(top = 6.dp),
+                label = { Text("City", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                textStyle = TxtStyle(fontSize = 20.sp, textAlign = TextAlign.Center),
+                modifier = Modifier
+                    .weight(8f)
+                    .padding(top = 6.dp),
                 shape = RoundedCornerShape(6.dp)
             )
 
@@ -352,7 +377,7 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
                             Toast.makeText(
                                 context,
                                 "$cityName is already in favourites.",
-                                Toast.LENGTH_LONG
+                                Toast.LENGTH_LONG,
                             )
                                 .show()
                             return@IconButton
@@ -366,7 +391,9 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
                             .show()
                     }
                 },
-                modifier = Modifier.weight(1f).padding(0.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(0.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Star,
@@ -453,7 +480,7 @@ suspend fun fetchWeatherData(city: String): WeatherResponse? {
 
 fun formatTime(unixTime: Long): String {
     val date = Date(unixTime * 1000)
-    val format = SimpleDateFormat("HH:mm:ss\ndd MMM yyyy", Locale.ENGLISH)
+    val format = SimpleDateFormat("HH:mm\ndd MMM yyyy", Locale.ENGLISH)
     return format.format(date)
 }
 
@@ -481,7 +508,7 @@ fun isNetworkConnectionAvailable(context: Context): Boolean {
 
 }
 
-fun saveWeatherData(context: Context, weatherResponse: WeatherResponse,filename : String) {
+fun saveWeatherData(context: Context, weatherResponse: WeatherResponse, filename: String) {
     try {
         val file = File(context.filesDir, filename)
 
@@ -500,7 +527,7 @@ fun saveWeatherData(context: Context, weatherResponse: WeatherResponse,filename 
 fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
 
     try {
-        val file = File(context.filesDir,filename)
+        val file = File(context.filesDir, filename)
 
         if (file.exists()) {
             val fileInputStream = FileInputStream(file)
@@ -538,8 +565,6 @@ fun loadFavouriteCities(context: Context): List<String> {
     }
     return emptyList()
 }
-
-
 
 
 @Preview(showBackground = true)
