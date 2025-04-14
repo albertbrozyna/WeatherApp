@@ -9,16 +9,25 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -28,9 +37,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -39,6 +54,7 @@ import kotlinx.coroutines.launch
 import retrofit2.http.GET
 import retrofit2.http.Query
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.google.gson.annotations.SerializedName
 import java.io.File
@@ -57,14 +73,68 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            WeatherAppTheme {
+            WeatherAppTheme(darkTheme = true) {
+                var selectedScreen = remember { mutableIntStateOf(0) }
+
                 Scaffold(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = { BottomNavigationBar(selectedScreen) }
                 ) {
-                    WeatherScreen()
+                    when (selectedScreen.value) {
+                        0 -> WeatherScreen()
+                        1 -> WeatherForecastScreen()
+                        2 -> SettingsScreen()
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(selectedScreen : MutableState<Int>) {
+
+    NavigationBar(
+        modifier = Modifier.padding(16.dp),
+    ) {
+        NavigationBarItem(
+            onClick = {selectedScreen.value = 0},
+            selected = selectedScreen.value == 0,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = "Home"
+                )
+            },
+            label = {Text("Home")}
+
+        )
+        NavigationBarItem(
+            onClick = {selectedScreen.value = 1},
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.FavoriteBorder,
+                    contentDescription = "Weather forecast",
+
+                )
+            },
+            selected = selectedScreen.value == 1,
+            label = {Text("Weather forecast")}
+        )
+
+
+        NavigationBarItem(
+            onClick = {selectedScreen.value = 2},
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings"
+                )
+
+            },
+            selected = selectedScreen.value == 2,
+            label = {Text("Settings")}
+        )
     }
 }
 
@@ -84,28 +154,8 @@ fun WeatherScreen() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        //Favourites list
-        if (showFavorites.value) {
-            Spacer(modifier = Modifier.padding(8.dp))
 
-            Text("Favourite cities:")
-            favoriteCities.value.forEach {
-                Text(
-                    " - $it\n",
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-
-        }
-
-        //Textfield to input cities
-        TextField(
-            value = city.value,
-            onValueChange = { city.value = it },
-            label = { Text("City") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.padding(16.dp))
+        CitiesSection(favoriteCities, showFavorites,city,context)
 
         //Button to get weather
         Button(
@@ -141,51 +191,6 @@ fun WeatherScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Get Weather")
-        }
-
-        //Button to add to favourites
-        Button(
-            onClick = {
-                val cityName = city.value.trim()
-                if (cityName.isNotEmpty()) {
-
-                    if (favoriteCities.value.contains(cityName)) {
-                        Toast.makeText(
-                            context,
-                            "$cityName is already in favourites.",
-                            Toast.LENGTH_LONG
-                        )
-                            .show()
-                        return@Button
-                    }
-
-                    favoriteCities.value = favoriteCities.value.toMutableList().apply {
-                        add(cityName)
-                    }
-                    saveFavouriteCities(context, favoriteCities.value)
-                    Toast.makeText(context, "$cityName added to favourites.", Toast.LENGTH_LONG)
-                        .show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = "Add to favourites",
-                tint = Color.Yellow
-            )
-        }
-
-        //Button to show favourites
-        Button(
-            onClick = {
-                showFavorites.value = !showFavorites.value
-            }
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = "Show favorites"
-            )
         }
 
         //Is loading text
@@ -225,6 +230,114 @@ fun WeatherScreen() {
         }
 
     }
+}
+
+@Composable
+fun CitiesSection(favoriteCities : MutableState<List<String>>,
+                  showFavorites : MutableState<Boolean>,
+                  city : MutableState<String>,
+                  context :Context ) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+
+    ){
+        //Favorities list
+        if (showFavorites.value) {
+
+
+            Text("Favourite cities:",
+                modifier = Modifier.padding(8.dp))
+
+            favoriteCities.value.forEach { cityName ->
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        " - $cityName\n",
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            favoriteCities.value = favoriteCities.value.toMutableList().apply {
+                                remove(cityName)
+                                saveFavouriteCities(context, favoriteCities.value)
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Remove from favorites",
+                            modifier = Modifier.padding(start = 8.dp),
+                            tint = Color.Red
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(modifier = Modifier
+            .fillMaxWidth().height(56.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            //Textfield to input cities
+            TextField(
+                value = city.value,
+                onValueChange = { city.value = it },
+                label = { Text("City") },
+                modifier = Modifier.weight(8f),
+                shape = RoundedCornerShape(6.dp)
+            )
+
+            //Button for adding to favorities
+            IconButton(
+                onClick = {
+                    val cityName = city.value.trim()
+                    if (cityName.isNotEmpty()) {
+
+                        if (favoriteCities.value.contains(cityName)) {
+                            Toast.makeText(
+                                context,
+                                "$cityName is already in favourites.",
+                                Toast.LENGTH_LONG
+                            )
+                                .show()
+                            return@IconButton
+                        }
+
+                        favoriteCities.value = favoriteCities.value.toMutableList().apply {
+                            add(cityName)
+                        }
+                        saveFavouriteCities(context, favoriteCities.value)
+                        Toast.makeText(context, "$cityName added to favourites.", Toast.LENGTH_LONG)
+                            .show()
+                    }
+                },
+                modifier = Modifier.weight(1f).padding(0.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Add to favourites",
+                    tint = Color.Yellow,
+                )
+            }
+
+            IconButton(
+                onClick = { showFavorites.value = !showFavorites.value },
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_list_24),
+                    contentDescription = "Show favorites"
+                )
+            }
+
+        }
+    }
+
 }
 
 
@@ -368,6 +481,9 @@ fun loadFavouriteCities(context: Context): List<String> {
     }
     return emptyList()
 }
+
+
+
 
 @Preview(showBackground = true)
 @Composable
