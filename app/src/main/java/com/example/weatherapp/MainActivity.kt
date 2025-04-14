@@ -13,9 +13,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -53,6 +55,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.modifier.ModifierLocalConsumer
 
@@ -79,6 +82,7 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
 import java.text.SimpleDateFormat
+import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Date
 import java.util.Locale
@@ -94,8 +98,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { BottomNavigationBar(selectedScreen) }
-                ) {
+                    bottomBar = { BottomNavigationBar(selectedScreen) }) {
                     when (selectedScreen.value) {
                         0 -> WeatherScreen()
                         1 -> WeatherForecastScreen()
@@ -118,71 +121,95 @@ fun WeatherScreen() {
     val context: Context = LocalContext.current
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
 
-        CitiesSection(favoriteCities, showFavorites, city, context)
+    //Selecting background depending on hour
+    val currentHour = remember { LocalTime.now().hour }
 
-        //Button to get weather
-        Button(
-            onClick = {
-                coroutineScope.launch {
-
-                    if (isNetworkConnectionAvailable(context)) {
-                        isLoading.value = true
-                        val result = fetchWeatherData(city.value)
-
-                        if (result == null) {
-                            weatherResponse.value = null
-                            error.value = "City not found"
-                        } else {
-                            weatherResponse.value = result
-                            error.value = null
-                        }
-
-                        isLoading.value = false
-
-                        weatherResponse.value?.let {
-                            saveWeatherData(context, it, "weatherData.txt")
-                        }
-
-                    } else {
-                        weatherResponse.value = loadWeatherData(context, "weatherData.txt")
-                        Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
-                    }
+    val backgroundImage = when(currentHour){
+        in 6..20 -> R.drawable.sky
+        in 21..24 -> R.drawable.night
+        in 0..5 -> R.drawable.night
+        else -> R.drawable.sky
+    }
 
 
-                }
-            },
+    Box(modifier = Modifier.fillMaxSize()){
+
+        //Bcg image
+        Image(
+            painter = painterResource(id = backgroundImage),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 6.dp, top = 8.dp, end = 6.dp),
-            shape = RoundedCornerShape(6.dp)
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Text("Get Weather", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-        }
 
-        //Is loading text
-        if (isLoading.value) {
-            Text("Loading...",
-                textAlign = TextAlign.Center,
-                fontSize = 30.sp,
-                modifier = Modifier.padding(top = 20.dp)
-            )
-        } else {
-            weatherResponse.value?.let {
-                WeatherInfo(it)
+            CitiesSection(favoriteCities, showFavorites, city, context)
+
+            //Button to get weather
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+
+                        if (isNetworkConnectionAvailable(context)) {
+                            isLoading.value = true
+                            val result = fetchWeatherData(city.value)
+
+                            if (result == null) {
+                                weatherResponse.value = null
+                                error.value = "City not found"
+                            } else {
+                                weatherResponse.value = result
+                                error.value = null
+                            }
+
+                            isLoading.value = false
+
+                            weatherResponse.value?.let {
+                                saveWeatherData(context, it, "weatherData.txt")
+                            }
+
+                        } else {
+                            weatherResponse.value = loadWeatherData(context, "weatherData.txt")
+                            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
+                        }
+
+
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 6.dp, top = 8.dp, end = 6.dp),
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text("Get Weather", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
-        }
 
-        //Error message
-        error.value?.let {
-            Toast.makeText(context,it,Toast.LENGTH_LONG).show()
-        }
+            //Is loading text
+            if (isLoading.value) {
+                Text(
+                    "Loading...",
+                    textAlign = TextAlign.Center,
+                    fontSize = 30.sp,
+                    modifier = Modifier.padding(top = 20.dp)
+                )
+            } else {
+                weatherResponse.value?.let {
+                    WeatherInfo(it)
+                }
+            }
 
+            //Error message
+            error.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            }
+
+        }
     }
 }
 
@@ -236,7 +263,8 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
 
         Text(
             text = formatTime(weatherResponse.dt),
-            textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
             fontSize = 26.sp,
             modifier = Modifier.padding(bottom = 6.dp)
         )
@@ -244,7 +272,8 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
         Row(horizontalArrangement = Arrangement.Center) {
             Text(
                 "Pressure:\n${weatherResponse.main.pressure}",
-                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
@@ -253,7 +282,8 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
 
             Text(
                 "Humidity:\n${weatherResponse.main.humidity}",
-                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
@@ -262,30 +292,42 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
 
         Text(
             "Coordinates:\n${weatherResponse.coord.longitude}, ${weatherResponse.coord.latitude}",
-            textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
             fontSize = 20.sp,
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
 
-        HorizontalDivider(thickness = 0.7.dp, color = Color.White)
+        HorizontalDivider(
+            thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)
+        )
 
-        Row(modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center){
+        Row(
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
+        ) {
             Text(
                 "Wind Speed:\n ${weatherResponse.wind.speed} m/s",
 
-                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
 
 
-            VerticalDivider(thickness = 0.5.dp, color = Color.White)
+            VerticalDivider(
+                thickness = 0.7.dp,
+                color = Color.White,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .fillMaxHeight()
+            )
 
             Text(
                 "Wind Direction:\n ${weatherResponse.wind.deg}°",
-                textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
@@ -310,15 +352,13 @@ fun CitiesSection(
 
 
             Text(
-                "Favourite cities:",
-                modifier = Modifier.padding(8.dp)
+                "Favourite cities:", modifier = Modifier.padding(8.dp)
             )
 
             favoriteCities.value.forEach { cityName ->
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
@@ -360,11 +400,12 @@ fun CitiesSection(
                 value = city.value,
                 onValueChange = { city.value = it },
                 label = { Text("City", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
-                textStyle = TxtStyle(fontSize = 20.sp, textAlign = TextAlign.Center),
+                textStyle = TxtStyle(fontSize = 20.sp),
                 modifier = Modifier
                     .weight(8f)
                     .padding(top = 6.dp),
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(6.dp),
+                singleLine = true
             )
 
             //Button for adding to favorities
@@ -378,8 +419,7 @@ fun CitiesSection(
                                 context,
                                 "$cityName is already in favourites.",
                                 Toast.LENGTH_LONG,
-                            )
-                                .show()
+                            ).show()
                             return@IconButton
                         }
 
@@ -429,25 +469,19 @@ data class WeatherResponse(
 ) : Serializable
 
 data class Main(
-    val temp: Float,
-    val feelsLike: Float,
-    val humidity: Float,
-    val pressure: Int
+    val temp: Float, val feelsLike: Float, val humidity: Float, val pressure: Int
 ) : Serializable
 
 data class Coord(
-    @SerializedName("lon") val longitude: Float,
-    @SerializedName("lat") val latitude: Float
+    @SerializedName("lon") val longitude: Float, @SerializedName("lat") val latitude: Float
 ) : Serializable
 
 data class Weather(
-    val description: String,
-    val icon: String
+    val description: String, val icon: String
 ) : Serializable
 
 data class Wind(
-    val speed: Float,
-    val deg: Int
+    val speed: Float, val deg: Int
 ) : Serializable
 
 

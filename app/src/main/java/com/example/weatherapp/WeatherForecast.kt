@@ -5,7 +5,9 @@ import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -16,14 +18,19 @@ fun WeatherForecastScreen(){
     val context: Context = LocalContext.current
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     CitiesSection(favoriteCities, showFavorites,city,context)
 
-    Button(
-        onClick = { weatherForecast = WeatherForecastAPI.getWeatherForecastByCity}
+    /*Button(
+
+
+        onClick = {
+            scope.launch {  weatherForecast = WeatherApiClient.weatherAPI.}
+            }
     ){
 
-    }
+    }*/
 
 }
 
