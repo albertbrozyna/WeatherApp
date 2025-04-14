@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Button
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,8 +48,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WeatherScreen() {
     var city = remember { mutableStateOf("") }
-    var temperature = remember { mutableStateOf<String?>(null) }
+    var weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val isLoading = remember { mutableStateOf(false) }
+    val error = remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -66,7 +69,18 @@ fun WeatherScreen() {
         Button(
             onClick = {
                 coroutineScope.launch {
-                    temperature.value = fetchWeatherData(city.value)
+                    isLoading.value = true
+                    val result = fetchWeatherData(city.value)
+
+                    if (result == null) {
+                        weatherResponse.value = null
+                        error.value = "City not found"
+                    } else {
+                        weatherResponse.value = result
+                        error.value = null
+                    }
+
+                    isLoading.value = false
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -74,12 +88,31 @@ fun WeatherScreen() {
             Text("Get Weather")
         }
 
-        temperature.value?.let {
+
+        if (isLoading.value) {
+            Text("Is Loading")
+        } else {
+            weatherResponse.value?.let {
+                Text(
+                    text = """
+                City: ${it.name}
+                Temperature: ${it.main.temp}°C
+                Humidity: ${it.main.humidity}%
+                Description: ${it.weather.firstOrNull()?.description ?: ""}
+                Coordinates: ${it.coord.latitude}, ${it.coord.longitude}
+                
+            """.trimIndent(),
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+        }
+
+        error.value?.let {
             Text(
-                text = "Current temperature in ${city.value} is $it",
+                text = it,
                 modifier = Modifier.padding(16.dp)
             )
-
         }
 
     }
@@ -87,13 +120,28 @@ fun WeatherScreen() {
 
 
 data class WeatherResponse(
-    val name :String,
-    val main : Main
+    val name: String,
+    val main: Main,
+    val coord: Coordinates,
+    val weather: List<Weather>,
 )
 
 data class Main(
-    val temp: Float
+    val temp: Float,
+    val feelsLike: Float,
+    val humidity: Float
 )
+
+data class Coordinates(
+    val longitude: Float,
+    val latitude: Float
+)
+
+data class Weather(
+    val description: String,
+    val icon: String
+)
+
 
 interface WeatherAPI {
     @GET("data/2.5/weather")
@@ -101,21 +149,31 @@ interface WeatherAPI {
         @Query("q") city: String,
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
-    ) : WeatherResponse
+    ): WeatherResponse
 }
 
-suspend fun fetchWeatherData(city :String) : String{
-    try{
+suspend fun fetchWeatherData(city: String): WeatherResponse? {
+    try {
         val weatherAPI = WeatherApiClient.weatherAPI
         val response = weatherAPI.getWeatherByCity(city, "880c3b528650d9c1fbb39efcbd7e6fb3")
 
-        return "${response.main.temp}°C"
-    }catch (e : Exception){
+        return response
+    } catch (e: Exception) {
         e.printStackTrace()
-        return "Error fetching weather data"
+
+        if (e.message?.contains("HTTP 404") == true) {
+            return null
+        }
+
+        return null
     }
 
 }
+
+fun isNetworkConnectionAvailable(): Boolean {
+  return true
+}
+
 
 @Preview(showBackground = true)
 @Composable

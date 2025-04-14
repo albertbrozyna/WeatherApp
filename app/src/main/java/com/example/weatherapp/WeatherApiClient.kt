@@ -7,12 +7,10 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object WeatherApiClient{
 
-    // Tworzymy Logging Interceptor
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY // Możesz ustawić inne poziomy: NONE, BASIC, HEADERS
+        level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // Tworzymy OkHttpClient z LoggingInterceptor
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .build()
