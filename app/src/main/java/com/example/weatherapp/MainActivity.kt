@@ -36,6 +36,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -55,6 +58,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import com.google.gson.annotations.SerializedName
 import java.io.File
@@ -188,7 +192,8 @@ fun WeatherScreen() {
 
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().padding(start = 6.dp,top = 8.dp,end = 6.dp),
+            shape = RoundedCornerShape(6.dp)
         ) {
             Text("Get Weather")
         }
@@ -252,13 +257,15 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
 
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     Text(
                         " - $cityName\n",
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = 8.dp),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
                     )
                     IconButton(
                         onClick = {
@@ -275,7 +282,12 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
                             tint = Color.Red
                         )
                     }
+
                 }
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = Color.White
+                )
             }
         }
 
@@ -288,7 +300,7 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
                 value = city.value,
                 onValueChange = { city.value = it },
                 label = { Text("City") },
-                modifier = Modifier.weight(8f),
+                modifier = Modifier.weight(8f).padding(top = 6.dp),
                 shape = RoundedCornerShape(6.dp)
             )
 
