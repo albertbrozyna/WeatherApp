@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -41,6 +43,7 @@ import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.MutableState
@@ -48,8 +51,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.layout.HorizontalAlignmentLine
+import androidx.compose.ui.modifier.ModifierLocalConsumer
+
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.weatherapp.ui.theme.WeatherAppTheme
@@ -58,9 +62,12 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.google.gson.annotations.SerializedName
+import org.intellij.lang.annotations.JdkConstants
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -68,6 +75,7 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
 import java.text.SimpleDateFormat
+import java.time.format.TextStyle
 import java.util.Date
 import java.util.Locale
 
@@ -181,11 +189,11 @@ fun WeatherScreen() {
                         isLoading.value = false
 
                         weatherResponse.value?.let {
-                            saveWeatherData(context, it)
+                            saveWeatherData(context, it, "weatherData.txt")
                         }
 
                     } else {
-                        weatherResponse.value = loadWeatherData(context)
+                        weatherResponse.value = loadWeatherData(context, "weatherData.txt")
                         Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
                     }
 
@@ -203,26 +211,7 @@ fun WeatherScreen() {
             Text("Is Loading")
         } else {
             weatherResponse.value?.let {
-                val iconCode = it.weather.firstOrNull()?.icon
-                val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
-
-
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("City: ${it.name}")
-                    Text("Temperature: ${it.main.temp}°C")
-                    Text("Time: ${formatTime(it.dt)}")
-                    Text("Description: ${it.weather.firstOrNull()?.description ?: ""}")
-                    Text("Coordinates: ${it.coord.longitude}, ${it.coord.latitude}")
-                    Text("Pressure: ${it.main.pressure}")
-
-                    Spacer(modifier = Modifier.padding(8.dp))
-
-                    AsyncImage(
-                        model = iconUrl,
-                        contentDescription = "Weather Icon",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                WeatherInfo(it)
             }
         }
 
@@ -236,6 +225,58 @@ fun WeatherScreen() {
 
     }
 }
+
+
+@Composable
+fun WeatherInfo(weatherResponse: WeatherResponse){
+    val iconCode = weatherResponse.weather.firstOrNull()?.icon
+    val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
+
+
+    Column(modifier = Modifier.padding(16.dp).fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            weatherResponse.name,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        AsyncImage(
+            model = iconUrl,
+            contentDescription = "Weather Icon",
+            modifier = Modifier.size(24.dp)
+        )
+
+
+        Text("${weatherResponse.main.temp}°C",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center)
+
+
+        Text("Description: ${weatherResponse.weather.firstOrNull()?.description ?: ""}",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center)
+
+
+        Text("Time: ${formatTime(weatherResponse.dt)}")
+
+        Text("Coordinates: ${weatherResponse.coord.longitude}, ${weatherResponse.coord.latitude}")
+        Text("Pressure: ${weatherResponse.main.pressure}")
+        Text("Humidity: ${weatherResponse.main.pressure}")
+        Text("Wind Speed: ${weatherResponse.wind.speed} m/s")
+        Text("Wind Direction: ${weatherResponse.wind.deg}°")
+
+        Spacer(modifier = Modifier.padding(8.dp))
+
+
+    }
+}
+
+
 
 @Composable
 fun CitiesSection(favoriteCities : MutableState<List<String>>,
@@ -284,10 +325,7 @@ fun CitiesSection(favoriteCities : MutableState<List<String>>,
                     }
 
                 }
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = Color.White
-                )
+
             }
         }
 
@@ -357,6 +395,8 @@ data class WeatherResponse(
     val name: String,
     val main: Main,
     val coord: Coord,
+    val visibility: Int,
+    val wind: Wind,
     val weather: List<Weather>,
     val dt: Long
 ) : Serializable
@@ -376,6 +416,11 @@ data class Coord(
 data class Weather(
     val description: String,
     val icon: String
+) : Serializable
+
+data class Wind(
+    val speed: Float,
+    val deg: Int
 ) : Serializable
 
 
@@ -408,7 +453,7 @@ suspend fun fetchWeatherData(city: String): WeatherResponse? {
 
 fun formatTime(unixTime: Long): String {
     val date = Date(unixTime * 1000)
-    val format = SimpleDateFormat("dd MMM yyyy HH:mm:ss", Locale.ENGLISH)
+    val format = SimpleDateFormat("HH:mm:ss\ndd MMM yyyy", Locale.ENGLISH)
     return format.format(date)
 }
 
@@ -436,9 +481,9 @@ fun isNetworkConnectionAvailable(context: Context): Boolean {
 
 }
 
-fun saveWeatherData(context: Context, weatherResponse: WeatherResponse) {
+fun saveWeatherData(context: Context, weatherResponse: WeatherResponse,filename : String) {
     try {
-        val file = File(context.filesDir, "weatherData.txt")
+        val file = File(context.filesDir, filename)
 
         val fileOutputStream = FileOutputStream(file)
 
@@ -452,10 +497,10 @@ fun saveWeatherData(context: Context, weatherResponse: WeatherResponse) {
     }
 }
 
-fun loadWeatherData(context: Context): WeatherResponse? {
+fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
 
     try {
-        val file = File(context.filesDir, "weatherData.txt")
+        val file = File(context.filesDir,filename)
 
         if (file.exists()) {
             val fileInputStream = FileInputStream(file)
