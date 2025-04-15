@@ -80,6 +80,12 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         if (city.value.isNotEmpty()) {
             weatherForecast.value = loadWeatherForecastData(context, filenameForecast)
         }
+
+
+        //Checking internet connection on start
+        if (!isNetworkConnectionAvailable(context)){
+            Toast.makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_LONG).show()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

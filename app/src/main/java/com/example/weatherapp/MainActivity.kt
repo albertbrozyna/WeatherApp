@@ -51,7 +51,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,8 +77,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.weatherapp.ui.theme.BottomNavigationBar
-import com.google.gson.annotations.SerializedName
-import org.intellij.lang.annotations.JdkConstants
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = { BottomNavigationBar(selectedScreen) }
                 ) { innerPadding ->
-                    when (selectedScreen.value) {
+                    when (selectedScreen.intValue) {
                         0 -> WeatherScreen(modifier = Modifier.padding(innerPadding))
                         1 -> WeatherForecastScreen(modifier = Modifier.padding(innerPadding))
                         2 -> SettingsScreen(modifier = Modifier.padding(innerPadding))
@@ -113,16 +113,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun WeatherScreen(modifier: Modifier = Modifier) {
-    var city = remember { mutableStateOf("") }
+    val context: Context = LocalContext.current
+    //Filename where weather is wrote
+    val filenameWeather  = context.getString(R.string.last_city_weather_filename)
+    //Key for last_weather in preferences
+    val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
+    var city = remember { mutableStateOf(loadPreference(context,lastWeatherCityKey) ?: "")  }
     var weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val isLoading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
-    val context: Context = LocalContext.current
-    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
+
+    var favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
     val apiKey = context.getString(R.string.api_key)
     //Selecting background depending on hour
@@ -135,6 +139,17 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
         else -> R.drawable.sky
     }
 
+    LaunchedEffect(Unit) {
+        //Loading last city
+        if (city.value.isNotEmpty()) {
+            weatherResponse.value = loadWeatherData(context, filenameWeather)
+        }
+
+        //Checking internet connection on start
+        if (!isNetworkConnectionAvailable(context)){
+            Toast.makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_LONG).show()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()){
 
@@ -175,13 +190,16 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                             }
 
                             isLoading.value = false
+                            //Saving prefernces
+                            savePreference(context ,lastWeatherCityKey,city.value)
 
+                            //Saving weather
                             weatherResponse.value?.let {
-                                saveWeatherData(context, it, "weatherData.txt")
+                                saveWeatherData(context, it, filenameWeather)
                             }
 
                         } else {
-                            weatherResponse.value = loadWeatherData(context, "weatherData.txt")
+                            weatherResponse.value = loadWeatherData(context, filenameWeather)
                             Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
                         }
 
@@ -222,6 +240,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun WeatherInfo(weatherResponse: WeatherResponse) {
+    //variables to icon
     val iconCode = weatherResponse.weather.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
 
@@ -361,18 +380,24 @@ fun CitiesSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    Text(
-                        " - $cityName\n",
-                        modifier = Modifier.padding(start = 8.dp),
-                        textAlign = TextAlign.Center,
-                        maxLines = 1
-                    )
+                    TextButton(
+                        //Changing input value to cityName
+                        onClick = {city.value = cityName}
+                    ){
+                        Text(" - $cityName\n",
+                            modifier = Modifier.padding(start = 8.dp),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1)
+                    }
+                    //Icon button do delete from favorite list
                     IconButton(
                         onClick = {
-                            favoriteCities.value = favoriteCities.value.toMutableList().apply {
+                            val updatedList = favoriteCities.value.toMutableList().apply {
                                 remove(cityName)
-                                saveFavouriteCities(context, favoriteCities.value)
                             }
+
+                            favoriteCities.value = updatedList
+                            saveFavouriteCities(context, updatedList)
                         },
                     ) {
                         Icon(
@@ -394,6 +419,9 @@ fun CitiesSection(
                 .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
+
+
             //Textfield to input cities
             TextField(
                 value = city.value,
@@ -401,7 +429,7 @@ fun CitiesSection(
                 label = { Text("City", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
                 textStyle = TxtStyle(fontSize = 20.sp),
                 modifier = Modifier
-                    .weight(8f)
+                    .weight(7f)
                     .padding(top = 6.dp),
                 shape = RoundedCornerShape(6.dp),
                 singleLine = true
@@ -422,10 +450,14 @@ fun CitiesSection(
                             return@IconButton
                         }
 
-                        favoriteCities.value = favoriteCities.value.toMutableList().apply {
+                        //Saving favorite cities
+                        val updatedList = favoriteCities.value.toMutableList().apply {
                             add(cityName)
                         }
-                        saveFavouriteCities(context, favoriteCities.value)
+                        favoriteCities.value = updatedList
+
+                        saveFavouriteCities(context,favoriteCities.value)
+
                         Toast.makeText(context, "$cityName added to favourites.", Toast.LENGTH_LONG)
                             .show()
                     }
@@ -441,12 +473,31 @@ fun CitiesSection(
                 )
             }
 
+
+            //Icon to show a list
             IconButton(
-                onClick = { showFavorites.value = !showFavorites.value },
+                onClick = {
+                    //Loading favorite cities
+                    favoriteCities.value = loadFavouriteCities(context)
+                    showFavorites.value = !showFavorites.value },
                 modifier = Modifier.weight(1f),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.baseline_list_24),
+                    contentDescription = "Show favorites"
+                )
+            }
+
+            //Refresh icon
+
+            IconButton(
+                onClick = {},
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(0.dp)
+            ){
+                Icon(
+                    painter = painterResource(R.drawable.baseline_refresh_24),
                     contentDescription = "Show favorites"
                 )
             }

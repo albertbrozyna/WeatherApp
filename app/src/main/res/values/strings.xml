@@ -8,4 +8,6 @@
     <string name="measure_units">metric</string>
     <string name="web_url">https://api.openweathermap.org</string>
     <string name="last_city_forecast"></string>
+    <string name="last_city_weather_filename">weatherData.txt</string>
+    <string name="last_city_weather_key">last_city_weather</string>
 </resources>
