@@ -77,6 +77,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.weatherapp.ui.theme.BottomNavigationBar
+import kotlinx.coroutines.delay
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -127,8 +128,37 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
     var favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
+    //Keys
     val apiKey = context.getString(R.string.api_key)
+    val refreshTimeKey = context.getString(R.string.refresh_time_key)
 
+    //Refresh time
+    val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 60L
+
+    //Delay
+    LaunchedEffect(city.value) {
+        while (true) {
+            val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L).toLong()
+            delay(delayTime)
+
+            if (city.value.isNotEmpty()) {
+                if (isNetworkConnectionAvailable(context)) {
+                    val result = fetchWeatherData(city.value, apiKey)
+
+                    if (result != null) {
+                        weatherResponse.value = result
+                        saveWeatherData(context, result, filenameWeather)
+                        savePreference(context, lastWeatherCityKey, city.value)
+                    }
+                } else {
+                    weatherResponse.value = loadWeatherData(context, filenameWeather)
+                    Toast
+                        .makeText(context, "No internet connection", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
+    }
 
     //reload functionality to tell if wee need to update UI
     val reload = remember { mutableStateOf(false) }
@@ -202,7 +232,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
         Column(
             modifier = modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .verticalScroll(scroll)
                 .padding(16.dp)
         ) {
@@ -306,6 +336,14 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
+        Text(
+            "Coordinates\n${weatherResponse.coord.lon}, ${weatherResponse.coord.lat}",
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
+            fontSize = 24.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         AsyncImage(
             model = iconUrl,
             contentDescription = "Weather Icon",
@@ -353,6 +391,10 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
+        HorizontalDivider(
+            thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)
+        )
+
         Row {
             Text(
                 "Pressure\n${weatherResponse.main.pressure}",
@@ -372,16 +414,6 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
-
-
-        Text(
-            "Coordinates\n${weatherResponse.coord.lon}, ${weatherResponse.coord.lat}",
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
 
         HorizontalDivider(
             thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)

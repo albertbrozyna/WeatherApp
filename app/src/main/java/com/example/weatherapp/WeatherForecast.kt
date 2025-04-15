@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
@@ -52,6 +53,39 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val apiKey = context.getString(R.string.api_key)
     val currentHour = remember { LocalTime.now().hour }
     val reload = remember { mutableStateOf(false) }
+
+    //Autorefresh
+
+    val refreshTimeKey = context.getString(R.string.refresh_time_key)
+
+    //Refresh time
+    val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 5L
+
+    //Delay
+    LaunchedEffect(city.value) {
+        while (true) {
+            val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L).toLong()
+            delay(delayTime)
+
+            if (city.value.isNotEmpty()) {
+                if (isNetworkConnectionAvailable(context)) {
+                    val result = fetchWeatherForecast(city.value, apiKey)
+
+                    if (result != null) {
+                        weatherForecast.value = result
+                        saveWeatherForecastData(context, result, filenameForecast)
+                        savePreference(context, lastCityForecastKey, city.value)
+                    }
+                } else {
+                    weatherForecast.value = loadWeatherForecastData(context, filenameForecast)
+                    Toast
+                        .makeText(context, "No internet connection", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
+    }
+
 
     //Reloading UI
     LaunchedEffect(reload.value) {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,8 +34,10 @@ fun SettingsScreen(modifier: Modifier = Modifier){
     val tempUnitsKey = context.getString(R.string.temp_units_key)
 
     //Refresh time interval default 60 s
-    val refreshInterval = remember { mutableStateOf<Int>(
-        loadPreference(context,refreshTimeKey)?.toInt() ?: 60)  }
+    val refreshInterval = remember {
+        mutableIntStateOf(
+            loadPreference(context,refreshTimeKey)?.toInt() ?: 5)
+    }
     val windUnits = remember { mutableStateOf(loadPreference(context,windUnitsKey) ?: "mph")}
     val tempUnits = remember { mutableStateOf(loadPreference(context,tempUnitsKey) ?: "metric")}
 
@@ -111,14 +114,14 @@ fun SettingsScreen(modifier: Modifier = Modifier){
         )
 
 
-        val intervals = listOf(5, 30, 60)
+        val intervals = listOf(2, 5, 10)
 
         Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             intervals.forEach { interval ->
                 RadioButton(
-                    selected = refreshInterval.value == interval,
+                    selected = refreshInterval.intValue == interval,
                     onClick = {
-                        refreshInterval.value = interval
+                        refreshInterval.intValue = interval
                         savePreference(context, refreshTimeKey, interval.toString())
                     }
                 )
