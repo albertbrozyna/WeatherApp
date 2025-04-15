@@ -1,6 +1,7 @@
 package com.example.weatherapp
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,13 +50,16 @@ import java.io.ObjectOutputStream
 import java.text.SimpleDateFormat
 import java.time.LocalTime
 import java.util.Locale
+import androidx.core.content.edit
+import java.io.Serializable
 
 @Composable
 fun WeatherForecastScreen(modifier: Modifier = Modifier) {
-    var city = remember { mutableStateOf("") }
-    var weatherForecast = remember { mutableStateOf<WeatherForecastList?>(null) }
     val context: Context = LocalContext.current
-    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
+    val preferenceName = context.getString(R.string.last_city_forecast)
+    var city = remember { mutableStateOf(loadPreference(context, preferenceName) ?: "") }
+    var weatherForecast = remember { mutableStateOf<WeatherForecastList?>(null) }
+   val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var isLoading = remember { mutableStateOf(false) }
@@ -63,11 +68,18 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val apiKey = context.getString(R.string.api_key)
     val currentHour = remember { LocalTime.now().hour }
 
+    //Selecting background
     val backgroundImage = when (currentHour) {
         in 6..20 -> R.drawable.sky
         in 21..24 -> R.drawable.night
         in 0..5 -> R.drawable.night
         else -> R.drawable.sky
+    }
+
+    LaunchedEffect(Unit) {
+        if (city.value.isNotEmpty()) {
+            weatherForecast.value = loadWeatherForecastData(context, filenameForecast)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -88,7 +100,6 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         ) {
             CitiesSection(favoriteCities, showFavorites, city, context)
 
-
             Button(
                 onClick = {
                     scope.launch {
@@ -107,7 +118,10 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
 
                             isLoading.value = false
 
-                            //Saving data
+                            //saving last city state
+                            savePreference(context ,preferenceName,city.value)
+
+                            //Saving data forecast data
                             weatherForecast.value?.let {
                                 saveWeatherForecastData(
                                     context, it, filenameForecast
@@ -130,7 +144,6 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             ) {
                 Text("Get weather forecast", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
-
 
             weatherForecast.value?.let {
                 WeekDaysForecast(context, it)
@@ -225,11 +238,11 @@ fun DayView(date: String, forecast: ForecastWeather) {
 
 data class WeatherForecastList(
     val list: List<ForecastWeather>
-)
+) : Serializable
 
 data class ForecastWeather(
     val dt: Long, val main: Main, val weather: List<Weather>, val dt_txt: String
-)
+) : Serializable
 
 interface WeatherForecastAPI {
     @GET("data/2.5/forecast")
@@ -318,4 +331,23 @@ fun dateWithoutYear(date: String): String {
 
     val dayFormat = SimpleDateFormat("MM-dd", Locale.ENGLISH)
     return dayFormat.format(parsedDate)
+}
+
+//function to save preferences
+fun savePreference(context : Context,key : String,city : String){
+    val appName = context.getString(R.string.app_name)
+
+    val sharedPreferences : SharedPreferences = context.getSharedPreferences(appName,Context.MODE_PRIVATE)
+
+    sharedPreferences.edit() {
+        putString(key, city)
+    }
+}
+
+//Function to load preferences
+fun loadPreference(context: Context,key: String) : String?{
+    val appName = context.getString(R.string.app_name)
+    val sharedPreferences : SharedPreferences = context.getSharedPreferences(appName,Context.MODE_PRIVATE)
+
+    return sharedPreferences.getString(key,null)
 }

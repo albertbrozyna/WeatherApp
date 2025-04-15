@@ -7,4 +7,5 @@
     <string name="main_date_format">HH:mm\ndd MMM yyyy</string>
     <string name="measure_units">metric</string>
     <string name="web_url">https://api.openweathermap.org</string>
+    <string name="last_city_forecast"></string>
 </resources>
