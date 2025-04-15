@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
@@ -98,11 +100,12 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { BottomNavigationBar(selectedScreen) }) {
+                    bottomBar = { BottomNavigationBar(selectedScreen) }
+                ) { innerPadding ->
                     when (selectedScreen.value) {
-                        0 -> WeatherScreen()
-                        1 -> WeatherForecastScreen()
-                        2 -> SettingsScreen()
+                        0 -> WeatherScreen(modifier = Modifier.padding(innerPadding))
+                        1 -> WeatherForecastScreen(modifier = Modifier.padding(innerPadding))
+                        2 -> SettingsScreen(modifier = Modifier.padding(innerPadding))
                     }
                 }
             }
@@ -112,7 +115,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun WeatherScreen() {
+fun WeatherScreen(modifier: Modifier = Modifier) {
     var city = remember { mutableStateOf("") }
     var weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -121,7 +124,7 @@ fun WeatherScreen() {
     val context: Context = LocalContext.current
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
-
+    val apiKey = context.getString(R.string.api_key)
     //Selecting background depending on hour
     val currentHour = remember { LocalTime.now().hour }
 
@@ -143,9 +146,12 @@ fun WeatherScreen() {
             contentScale = ContentScale.Crop
         )
 
+        val scroll = rememberScrollState()
+
         Column(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = modifier
+                .fillMaxWidth()
+                .verticalScroll(scroll)
                 .padding(16.dp)
         ) {
 
@@ -158,7 +164,7 @@ fun WeatherScreen() {
 
                         if (isNetworkConnectionAvailable(context)) {
                             isLoading.value = true
-                            val result = fetchWeatherData(city.value)
+                            val result = fetchWeatherData(city.value,apiKey)
 
                             if (result == null) {
                                 weatherResponse.value = null
@@ -238,13 +244,13 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
             model = iconUrl,
             contentDescription = "Weather Icon",
             modifier = Modifier
-                .size(60.dp)
+                .size(120.dp)
                 .padding(bottom = 8.dp)
         )
 
 
         Text(
-            "${weatherResponse.main.temp}°C",
+            "${weatherResponse.main.temp.toInt()}°C",
             fontSize = 38.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -269,33 +275,33 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
-        Row(horizontalArrangement = Arrangement.Center) {
+        Row(horizontalArrangement = Arrangement.SpaceEvenly) {
             Text(
-                "Pressure:\n${weatherResponse.main.pressure}",
+                "Pressure\n${weatherResponse.main.pressure}",
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(16.dp))
 
             Text(
-                "Humidity:\n${weatherResponse.main.humidity}",
+                "Humidity\n${weatherResponse.main.humidity}",
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
 
         Text(
-            "Coordinates:\n${weatherResponse.coord.longitude}, ${weatherResponse.coord.latitude}",
+            "Coordinates\n${weatherResponse.coord.lon}, ${weatherResponse.coord.lat}",
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            modifier = Modifier.padding(bottom = 6.dp)
+            fontSize = 24.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
 
@@ -307,7 +313,7 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
             modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                "Wind Speed:\n ${weatherResponse.wind.speed} m/s",
+                "Wind Speed\n ${weatherResponse.wind.speed} m/s",
 
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
@@ -315,17 +321,10 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
                 modifier = Modifier.padding(bottom = 6.dp)
             )
 
-
-            VerticalDivider(
-                thickness = 0.7.dp,
-                color = Color.White,
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .fillMaxHeight()
-            )
+            Spacer(Modifier.width(16.dp))
 
             Text(
-                "Wind Direction:\n ${weatherResponse.wind.deg}°",
+                "Wind Direction\n ${weatherResponse.wind.deg}°",
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
@@ -473,7 +472,8 @@ data class Main(
 ) : Serializable
 
 data class Coord(
-    @SerializedName("lon") val longitude: Float, @SerializedName("lat") val latitude: Float
+    val lon: Float,
+    val lat: Float
 ) : Serializable
 
 data class Weather(
@@ -494,10 +494,10 @@ interface WeatherAPI {
     ): WeatherResponse
 }
 
-suspend fun fetchWeatherData(city: String): WeatherResponse? {
+suspend fun fetchWeatherData(city: String,apiKey: String): WeatherResponse? {
     try {
         val weatherAPI = WeatherApiClient.weatherAPI
-        val response = weatherAPI.getWeatherByCity(city, "880c3b528650d9c1fbb39efcbd7e6fb3")
+        val response = weatherAPI.getWeatherByCity(city, apiKey)
 
         return response
     } catch (e: Exception) {
@@ -579,7 +579,8 @@ fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
 
 fun saveFavouriteCities(context: Context, cities: List<String>) {
     try {
-        val file = File(context.filesDir, "favorite_cities.txt")
+        val filename = context.getString(R.string.favorite_cities)
+        val file = File(context.filesDir, filename)
         file.writeText(cities.joinToString("\n"))
 
     } catch (e: Exception) {
@@ -589,7 +590,9 @@ fun saveFavouriteCities(context: Context, cities: List<String>) {
 
 fun loadFavouriteCities(context: Context): List<String> {
     try {
-        val file = File(context.filesDir, "favorite_cities.txt")
+        val filename = context.getString(R.string.favorite_cities)
+
+        val file = File(context.filesDir, filename)
         if (file.exists()) {
             return file.readLines()
         }
@@ -605,6 +608,6 @@ fun loadFavouriteCities(context: Context): List<String> {
 @Composable
 fun GreetingPreview() {
     WeatherAppTheme {
-        WeatherScreen()
+        WeatherForecastScreen()
     }
 }

@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">WeatherApp</string>
+    <string name="api_key">880c3b528650d9c1fbb39efcbd7e6fb3</string>
+    <string name="weather_forecast_data">weatherForecastData.txt</string>
+    <string name="forecast_hour">12:00:00</string>
+    <string name="favorite_cities">favorite_cities.txt</string>
+    <string name="main_date_format">HH:mm\ndd MMM yyyy</string>
+    <string name="measure_units">metric</string>
+    <string name="web_url">https://api.openweathermap.org</string>
 </resources>

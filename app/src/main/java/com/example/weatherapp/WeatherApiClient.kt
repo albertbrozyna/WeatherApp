@@ -15,12 +15,13 @@ object WeatherApiClient{
         .addInterceptor(loggingInterceptor)
         .build()
 
-    private const val URL = "https://api.openweathermap.org/"
+    private const val URL = "https://api.openweathermap.org"
 
-    val retrofit = Retrofit.Builder()
+    val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(URL)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
     val weatherAPI : WeatherAPI = retrofit.create(WeatherAPI::class.java)
+    val weatherForecastAPI : WeatherForecastAPI = retrofit.create(WeatherForecastAPI::class.java)
 }
