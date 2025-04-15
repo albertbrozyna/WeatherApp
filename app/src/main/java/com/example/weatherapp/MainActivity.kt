@@ -132,6 +132,9 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     //Selecting background depending on hour
     val currentHour = remember { LocalTime.now().hour }
 
+
+
+
     val backgroundImage = when(currentHour){
         in 6..20 -> R.drawable.sky
         in 21..24 -> R.drawable.night
@@ -224,7 +227,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                 )
             } else {
                 weatherResponse.value?.let {
-                    WeatherInfo(it)
+                    WeatherInfo(context,it)
                 }
             }
 
@@ -239,11 +242,19 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
 
 @Composable
-fun WeatherInfo(weatherResponse: WeatherResponse) {
+fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
     //variables to icon
     val iconCode = weatherResponse.weather.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
 
+
+    //keys
+    val windUnitsKey = context.getString(R.string.temp_units_key)
+    val tempUnitsKey = context.getString(R.string.wind_units_key)
+
+    //units preferences
+    val windUnits = loadPreference(context, windUnitsKey) ?: "m/s"
+    val tempUnits = loadPreference(context, tempUnitsKey) ?: "metric"
 
     Column(
         modifier = Modifier
@@ -267,16 +278,28 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
                 .padding(bottom = 8.dp)
         )
 
+        //For celc
+        if(tempUnits == "metric"){
+            Text(
+                "${weatherResponse.main.temp.toInt()}°C",
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }else{
 
-        Text(
-            "${weatherResponse.main.temp.toInt()}°C",
-            fontSize = 38.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+            val tempF = convertTemperatureToF(weatherResponse.main.temp)
+            Text(
+                tempF,
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
-
+        //Description
         Text(
             weatherResponse.weather.firstOrNull()?.description ?: "",
             fontSize = 28.sp,
@@ -285,7 +308,7 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
             modifier = Modifier.padding(bottom = 10.dp)
         )
 
-
+        //Time
         Text(
             text = formatTime(weatherResponse.dt),
             textAlign = TextAlign.Center,
@@ -294,7 +317,7 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
-        Row(horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row{
             Text(
                 "Pressure\n${weatherResponse.main.pressure}",
                 textAlign = TextAlign.Center,
@@ -303,7 +326,7 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
                 modifier = Modifier.padding(bottom = 6.dp)
             )
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(24.dp))
 
             Text(
                 "Humidity\n${weatherResponse.main.humidity}",
@@ -331,8 +354,16 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
         Row(
             modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
         ) {
+
+            //Wind speed
+            var wind = ""
+            if( windUnits == "mph"){
+                wind = convertWindSpeedToMph(weatherResponse.wind.speed)
+            }else{
+                wind = "${weatherResponse.wind.speed} m/s"
+            }
             Text(
-                "Wind Speed\n ${weatherResponse.wind.speed} m/s",
+                "Wind Speed\n $wind",
 
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
@@ -340,7 +371,7 @@ fun WeatherInfo(weatherResponse: WeatherResponse) {
                 modifier = Modifier.padding(bottom = 6.dp)
             )
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(24.dp))
 
             Text(
                 "Wind Direction\n ${weatherResponse.wind.deg}°",

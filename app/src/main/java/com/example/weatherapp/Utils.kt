@@ -98,3 +98,14 @@ fun dateWithoutYear(date: String): String {
     val dayFormat = SimpleDateFormat("MM-dd", Locale.ENGLISH)
     return dayFormat.format(parsedDate)
 }
+
+fun convertTemperatureToF(temp: Float): String {
+    return "${(temp * 9 / 5 + 32).toInt()}°F"
+}
+
+//To convertSpeed
+fun convertWindSpeedToMph(speed: Float): String {
+    val speedInMph = speed * 2.23694
+    return "${speedInMph.toInt()} mph"
+
+}

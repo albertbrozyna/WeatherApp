@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -34,8 +35,8 @@ fun SettingsScreen(modifier: Modifier = Modifier){
     //Refresh time interval default 60 s
     val refreshInterval = remember { mutableStateOf<Int>(
         loadPreference(context,refreshTimeKey)?.toInt() ?: 60)  }
-    val windUnits = remember { mutableStateOf(loadPreference(context,windUnitsKey) ?: "km/h")}
-    val tempUnits = remember { mutableStateOf(loadPreference(context,refreshTimeKey) ?: "metric")}
+    val windUnits = remember { mutableStateOf(loadPreference(context,windUnitsKey) ?: "mph")}
+    val tempUnits = remember { mutableStateOf(loadPreference(context,tempUnitsKey) ?: "metric")}
 
 
     Column(
@@ -52,7 +53,7 @@ fun SettingsScreen(modifier: Modifier = Modifier){
         )
 
         //Temp units select
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             //Metric system
             RadioButton(
                 selected = tempUnits.value == "metric",
@@ -82,15 +83,15 @@ fun SettingsScreen(modifier: Modifier = Modifier){
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             RadioButton(
-                selected = windUnits.value == "km/h",
+                selected = windUnits.value == "mph",
                 onClick = {
-                    windUnits.value = "km/h"
-                    savePreference(context, windUnitsKey, "km/h")
+                    windUnits.value = "mph"
+                    savePreference(context, windUnitsKey, "mph")
                 }
             )
-            Text("km/h")
+            Text("mph")
 
 
             Spacer(Modifier.width(16.dp))
@@ -109,39 +110,27 @@ fun SettingsScreen(modifier: Modifier = Modifier){
         Text("Select Refresh Interval", fontSize = 20.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 16.dp)
         )
-        Row() {
-            RadioButton(
-                selected = refreshInterval.value == 5,
-                onClick = {
-                    refreshInterval.value = 5
-                    savePreference(context, refreshTimeKey, 5.toString())
-                }
-            )
-            Text("5 minutes")
 
 
-            Spacer(Modifier.width(16.dp))
-            RadioButton(
-                selected = refreshInterval.value == 30,
-                onClick = {
-                    refreshInterval.value = 30
-                    savePreference(context, refreshTimeKey, 30.toString())
-                }
-            )
-            Text("30 minutes")
+        val intervals = listOf(5, 30, 60)
 
-            Spacer(Modifier.width(16.dp))
-            RadioButton(
-                selected = refreshInterval.value == 60,
-                onClick = {
-                    refreshInterval.value = 60
-                    savePreference(context, refreshTimeKey, 60.toString())
+        Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
+            intervals.forEach { interval ->
+                RadioButton(
+                    selected = refreshInterval.value == interval,
+                    onClick = {
+                        refreshInterval.value = interval
+                        savePreference(context, refreshTimeKey, interval.toString())
+                    }
+                )
+                Text("$interval min")
+
+
+                if (interval != intervals.last()) {
+                    Spacer(Modifier.width(8.dp))
                 }
-            )
-            Text("60 minutes")
+            }
         }
-
-
     }
 
 }
