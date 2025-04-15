@@ -51,6 +51,42 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val filenameForecast = context.getString(R.string.weather_forecast_data)
     val apiKey = context.getString(R.string.api_key)
     val currentHour = remember { LocalTime.now().hour }
+    val reload = remember { mutableStateOf(false) }
+
+    //Reloading UI
+    LaunchedEffect(reload.value) {
+        if (isNetworkConnectionAvailable(context)) {
+
+            isLoading.value = true
+            val result = fetchWeatherForecast(city.value, apiKey)
+
+            if (result == null) {
+                weatherForecast.value = null
+                error.value = "City not found"
+            } else {
+                weatherForecast.value = result
+                error.value = null
+            }
+
+            isLoading.value = false
+
+            //saving last city state
+            savePreference(context, lastCityForecastKey, city.value)
+
+            //Saving data forecast data
+            weatherForecast.value?.let {
+                saveWeatherForecastData(
+                    context, it, filenameForecast
+                )
+            }
+            reload.value = false
+        } else {
+            weatherForecast.value =
+                loadWeatherForecastData(context, filenameForecast)
+            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG)
+                .show()
+        }
+    }
 
     //Selecting background
     val backgroundImage = when (currentHour) {
@@ -60,11 +96,11 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         else -> R.drawable.sky
     }
 
+    //Loading started data
     LaunchedEffect(Unit) {
         if (city.value.isNotEmpty()) {
             weatherForecast.value = loadWeatherForecastData(context, filenameForecast)
         }
-
 
         //Checking internet connection on start
         if (!isNetworkConnectionAvailable(context)){
@@ -88,7 +124,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CitiesSection(favoriteCities, showFavorites, city, context)
+            CitiesSection(favoriteCities, showFavorites, city, context,reload)
 
             Button(
                 onClick = {
@@ -135,10 +171,19 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 Text("Get weather forecast", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            weatherForecast.value?.let {
-                WeekDaysForecast(context, it)
+            if (isLoading.value) {
+                Box(
+                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Loading...", textAlign = TextAlign.Center, fontSize = 30.sp
+                    )
+                }
+            }else{
+                weatherForecast.value?.let {
+                    WeekDaysForecast(context, it)
+                }
             }
-
         }
     }
 

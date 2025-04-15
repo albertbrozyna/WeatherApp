@@ -100,8 +100,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { BottomNavigationBar(selectedScreen) }
-                ) { innerPadding ->
+                    bottomBar = { BottomNavigationBar(selectedScreen) }) { innerPadding ->
                     when (selectedScreen.intValue) {
                         0 -> WeatherScreen(modifier = Modifier.padding(innerPadding))
                         1 -> WeatherForecastScreen(modifier = Modifier.padding(innerPadding))
@@ -117,25 +116,56 @@ class MainActivity : ComponentActivity() {
 fun WeatherScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
     //Filename where weather is wrote
-    val filenameWeather  = context.getString(R.string.last_city_weather_filename)
+    val filenameWeather = context.getString(R.string.last_city_weather_filename)
     //Key for last_weather in preferences
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
-    var city = remember { mutableStateOf(loadPreference(context,lastWeatherCityKey) ?: "")  }
+    var city = remember { mutableStateOf(loadPreference(context, lastWeatherCityKey) ?: "") }
     var weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
     val coroutineScope = rememberCoroutineScope()
-    val isLoading = remember { mutableStateOf(false) }
+    var isLoading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
 
     var favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
     val apiKey = context.getString(R.string.api_key)
+
+
+    //reload functionality to tell if wee need to update UI
+    val reload = remember { mutableStateOf(false) }
+
+    LaunchedEffect(reload.value) {
+        if (isNetworkConnectionAvailable(context)) {
+            isLoading.value = true
+            val result = fetchWeatherData(city.value, apiKey)
+
+            if (result == null) {
+                weatherResponse.value = null
+                error.value = "City not found"
+            } else {
+                weatherResponse.value = result
+                error.value = null
+            }
+
+            isLoading.value = false
+            //Saving prefernces
+            savePreference(context, lastWeatherCityKey, city.value)
+
+            //Saving weather
+            weatherResponse.value?.let {
+                saveWeatherData(context, it, filenameWeather)
+            }
+            reload.value = false
+        } else {
+            weatherResponse.value = loadWeatherData(context, filenameWeather)
+            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+
     //Selecting background depending on hour
     val currentHour = remember { LocalTime.now().hour }
 
-
-
-
-    val backgroundImage = when(currentHour){
+    val backgroundImage = when (currentHour) {
         in 6..20 -> R.drawable.sky
         in 21..24 -> R.drawable.night
         in 0..5 -> R.drawable.night
@@ -149,12 +179,16 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
         }
 
         //Checking internet connection on start
-        if (!isNetworkConnectionAvailable(context)){
-            Toast.makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_LONG).show()
+        if (!isNetworkConnectionAvailable(context)) {
+            Toast.makeText(
+                context,
+                "No internet connection, displayed data might not be up to date.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()){
+    Box(modifier = Modifier.fillMaxSize()) {
 
         //Bcg image
         Image(
@@ -173,7 +207,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                 .padding(16.dp)
         ) {
 
-            CitiesSection(favoriteCities, showFavorites, city, context)
+            CitiesSection(favoriteCities, showFavorites, city, context, reload)
 
             //Button to get weather
             Button(
@@ -182,7 +216,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
                         if (isNetworkConnectionAvailable(context)) {
                             isLoading.value = true
-                            val result = fetchWeatherData(city.value,apiKey)
+                            val result = fetchWeatherData(city.value, apiKey)
 
                             if (result == null) {
                                 weatherResponse.value = null
@@ -194,7 +228,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
                             isLoading.value = false
                             //Saving prefernces
-                            savePreference(context ,lastWeatherCityKey,city.value)
+                            savePreference(context, lastWeatherCityKey, city.value)
 
                             //Saving weather
                             weatherResponse.value?.let {
@@ -203,7 +237,8 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
                         } else {
                             weatherResponse.value = loadWeatherData(context, filenameWeather)
-                            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG)
+                                .show()
                         }
 
 
@@ -219,15 +254,17 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
             //Is loading text
             if (isLoading.value) {
-                Text(
-                    "Loading...",
-                    textAlign = TextAlign.Center,
-                    fontSize = 30.sp,
-                    modifier = Modifier.padding(top = 20.dp)
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Loading...", textAlign = TextAlign.Center, fontSize = 30.sp
+                    )
+                }
+
             } else {
                 weatherResponse.value?.let {
-                    WeatherInfo(context,it)
+                    WeatherInfo(context, it)
                 }
             }
 
@@ -242,11 +279,10 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
 
 @Composable
-fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
+fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
     //variables to icon
     val iconCode = weatherResponse.weather.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
-
 
     //keys
     val windUnitsKey = context.getString(R.string.wind_units_key)
@@ -279,7 +315,7 @@ fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
         )
 
         //For celc
-        if(tempUnits == "metric"){
+        if (tempUnits == "metric") {
             Text(
                 "${weatherResponse.main.temp.toInt()}°C",
                 fontSize = 38.sp,
@@ -287,7 +323,7 @@ fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-        }else{
+        } else {
 
             val tempF = convertTemperatureToF(weatherResponse.main.temp)
             Text(
@@ -317,7 +353,7 @@ fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
             modifier = Modifier.padding(bottom = 6.dp)
         )
 
-        Row{
+        Row {
             Text(
                 "Pressure\n${weatherResponse.main.pressure}",
                 textAlign = TextAlign.Center,
@@ -357,9 +393,9 @@ fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
 
             //Wind speed
             var wind = ""
-            if( windUnits == "mph"){
+            if (windUnits == "mph") {
                 wind = convertWindSpeedToMph(weatherResponse.wind.speed)
-            }else{
+            } else {
                 wind = "${weatherResponse.wind.speed} m/s"
             }
             Text(
@@ -390,15 +426,16 @@ fun CitiesSection(
     favoriteCities: MutableState<List<String>>,
     showFavorites: MutableState<Boolean>,
     city: MutableState<String>,
-    context: Context
+    context: Context,
+    reload: MutableState<Boolean>,
 ) {
+
     Column(
         modifier = Modifier.fillMaxWidth(),
 
         ) {
         //Favorities list
         if (showFavorites.value) {
-
 
             Text(
                 "Favourite cities:", modifier = Modifier.padding(8.dp)
@@ -413,12 +450,14 @@ fun CitiesSection(
 
                     TextButton(
                         //Changing input value to cityName
-                        onClick = {city.value = cityName}
-                    ){
-                        Text(" - $cityName\n",
+                        onClick = { city.value = cityName }) {
+                        Text(
+                            " - $cityName\n",
                             modifier = Modifier.padding(start = 8.dp),
                             textAlign = TextAlign.Center,
-                            maxLines = 1)
+                            maxLines = 1,
+                            fontSize = 18.sp
+                        )
                     }
                     //Icon button do delete from favorite list
                     IconButton(
@@ -450,8 +489,6 @@ fun CitiesSection(
                 .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-
 
             //Textfield to input cities
             TextField(
@@ -487,7 +524,7 @@ fun CitiesSection(
                         }
                         favoriteCities.value = updatedList
 
-                        saveFavouriteCities(context,favoriteCities.value)
+                        saveFavouriteCities(context, favoriteCities.value)
 
                         Toast.makeText(context, "$cityName added to favourites.", Toast.LENGTH_LONG)
                             .show()
@@ -510,7 +547,8 @@ fun CitiesSection(
                 onClick = {
                     //Loading favorite cities
                     favoriteCities.value = loadFavouriteCities(context)
-                    showFavorites.value = !showFavorites.value },
+                    showFavorites.value = !showFavorites.value
+                },
                 modifier = Modifier.weight(1f),
             ) {
                 Icon(
@@ -520,13 +558,13 @@ fun CitiesSection(
             }
 
             //Refresh icon
-
             IconButton(
-                onClick = {},
-                modifier = Modifier
+                onClick = {
+                    reload.value = true
+                }, modifier = Modifier
                     .weight(1f)
                     .padding(0.dp)
-            ){
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.baseline_refresh_24),
                     contentDescription = "Show favorites"
@@ -539,9 +577,7 @@ fun CitiesSection(
 }
 
 
-
-
-suspend fun fetchWeatherData(city: String,apiKey: String): WeatherResponse? {
+suspend fun fetchWeatherData(city: String, apiKey: String): WeatherResponse? {
     try {
         val weatherAPI = WeatherApiClient.weatherAPI
         val response = weatherAPI.getWeatherByCity(city, apiKey)
