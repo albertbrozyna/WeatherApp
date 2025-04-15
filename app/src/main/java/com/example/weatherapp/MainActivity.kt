@@ -508,42 +508,7 @@ fun CitiesSection(
 }
 
 
-data class WeatherResponse(
-    val name: String,
-    val main: Main,
-    val coord: Coord,
-    val visibility: Int,
-    val wind: Wind,
-    val weather: List<Weather>,
-    val dt: Long
-) : Serializable
 
-data class Main(
-    val temp: Float, val feelsLike: Float, val humidity: Float, val pressure: Int
-) : Serializable
-
-data class Coord(
-    val lon: Float,
-    val lat: Float
-) : Serializable
-
-data class Weather(
-    val description: String, val icon: String
-) : Serializable
-
-data class Wind(
-    val speed: Float, val deg: Int
-) : Serializable
-
-
-interface WeatherAPI {
-    @GET("data/2.5/weather")
-    suspend fun getWeatherByCity(
-        @Query("q") city: String,
-        @Query("appid") apiKey: String,
-        @Query("units") units: String = "metric"
-    ): WeatherResponse
-}
 
 suspend fun fetchWeatherData(city: String,apiKey: String): WeatherResponse? {
     try {

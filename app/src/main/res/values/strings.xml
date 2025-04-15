@@ -7,7 +7,11 @@
     <string name="main_date_format">HH:mm\ndd MMM yyyy</string>
     <string name="measure_units">metric</string>
     <string name="web_url">https://api.openweathermap.org</string>
-    <string name="last_city_forecast"></string>
+    <string name="last_city_forecast">last_city_forecast</string>
     <string name="last_city_weather_filename">weatherData.txt</string>
     <string name="last_city_weather_key">last_city_weather</string>
+    <string name="refresh_time_key">refresh_time</string>
+    <string name="temp_units_key">temp_units</string>
+    <string name="wind_units_key">wind_units</string>
+
 </resources>

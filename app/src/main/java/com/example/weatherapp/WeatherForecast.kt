@@ -1,21 +1,17 @@
 package com.example.weatherapp
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.modifier.ModifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,24 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
-import retrofit2.http.GET
-import retrofit2.http.Query
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.text.SimpleDateFormat
 import java.time.LocalTime
-import java.util.Locale
-import androidx.core.content.edit
-import java.io.Serializable
 
 @Composable
 fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
-    val preferenceName = context.getString(R.string.last_city_forecast)
-    var city = remember { mutableStateOf(loadPreference(context, preferenceName) ?: "") }
+    val lastCityForecastKey = context.getString(R.string.last_city_forecast)
+    var city = remember { mutableStateOf(loadPreference(context, lastCityForecastKey) ?: "") }
     var weatherForecast = remember { mutableStateOf<WeatherForecastList?>(null) }
    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     var showFavorites = remember { mutableStateOf(false) }
@@ -125,7 +109,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                             isLoading.value = false
 
                             //saving last city state
-                            savePreference(context ,preferenceName,city.value)
+                            savePreference(context ,lastCityForecastKey,city.value)
 
                             //Saving data forecast data
                             weatherForecast.value?.let {
@@ -242,118 +226,10 @@ fun DayView(date: String, forecast: ForecastWeather) {
 }
 
 
-data class WeatherForecastList(
-    val list: List<ForecastWeather>
-) : Serializable
-
-data class ForecastWeather(
-    val dt: Long, val main: Main, val weather: List<Weather>, val dt_txt: String
-) : Serializable
-
-interface WeatherForecastAPI {
-    @GET("data/2.5/forecast")
-    suspend fun getWeatherForecastByCity(
-        @Query("q") city: String,
-        @Query("appid") apiKey: String,
-        @Query("units") units: String = "metric"
-    ): WeatherForecastList
-}
-
-//Getting forecast for next days
-suspend fun fetchWeatherForecast(city: String, apiKey: String): WeatherForecastList? {
-    return try {
-        val weatherForecastAPI = WeatherApiClient.weatherForecastAPI
-        weatherForecastAPI.getWeatherForecastByCity(city, apiKey)
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
-}
-
-//Saving forecast data to file
-fun saveWeatherForecastData(
-    context: Context,
-    weatherForecast: WeatherForecastList,
-    filename: String
-) {
-    try {
-        val file = File(context.filesDir, filename)
-
-        val fileOutputStream = FileOutputStream(file)
-
-        val objectOutputStream = ObjectOutputStream(fileOutputStream)
-
-        objectOutputStream.writeObject(weatherForecast)
-        objectOutputStream.close()
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
-
-//Reading forecast data from file
-fun loadWeatherForecastData(context: Context, filename: String): WeatherForecastList? {
-
-    try {
-        val file = File(context.filesDir, filename)
-
-        if (file.exists()) {
-            val fileInputStream = FileInputStream(file)
-            val objectInputStream = ObjectInputStream(fileInputStream)
-            val weatherForecast = objectInputStream.readObject() as WeatherForecastList
-            objectInputStream.close()
-            return weatherForecast
-
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return null
-}
 
 
-fun getDayName(date: String): String {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
 
-    val parsedDate = dateFormat.parse(date)
 
-    if (parsedDate == null) {
-        return "Invalid date"
-    }
 
-    val dayFormat = SimpleDateFormat("EEEE", Locale.ENGLISH)
-    return dayFormat.format(parsedDate)
-}
 
-fun dateWithoutYear(date: String): String {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
 
-    val parsedDate = dateFormat.parse(date)
-
-    if (parsedDate == null) {
-        return "Invalid date"
-    }
-
-    val dayFormat = SimpleDateFormat("MM-dd", Locale.ENGLISH)
-    return dayFormat.format(parsedDate)
-}
-
-//function to save preferences
-fun savePreference(context : Context,key : String,city : String){
-    val appName = context.getString(R.string.app_name)
-
-    val sharedPreferences : SharedPreferences = context.getSharedPreferences(appName,Context.MODE_PRIVATE)
-
-    sharedPreferences.edit() {
-        putString(key, city)
-    }
-}
-
-//Function to load preferences
-fun loadPreference(context: Context,key: String) : String?{
-    val appName = context.getString(R.string.app_name)
-    val sharedPreferences : SharedPreferences = context.getSharedPreferences(appName,Context.MODE_PRIVATE)
-
-    return sharedPreferences.getString(key,null)
-}
