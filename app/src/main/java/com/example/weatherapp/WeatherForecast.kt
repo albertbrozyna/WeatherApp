@@ -3,6 +3,7 @@ package com.example.weatherapp
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.modifier.ModifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
@@ -145,18 +148,21 @@ fun WeekDaysForecast(context: Context, weatherForecast: WeatherForecastList) {
         weatherForecast.list.filter { it.dt_txt.contains(context.getString(R.string.forecast_hour)) }
             .groupBy { it.dt_txt.substring(0, 10) }.toList().take(7)
 
-
     val scroll = rememberScrollState()
 
     Column(
         modifier = Modifier.fillMaxWidth().verticalScroll(scroll),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
         selectedDates.forEach { (date, forecasts) ->
 
             val firstForecast = forecasts.first()
 
             DayView(date, firstForecast)
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -172,13 +178,17 @@ fun DayView(date: String, forecast: ForecastWeather) {
     val iconUrl = "https://openweathermap.org/img/wn/${iconCode}@2x.png"
     val weatherDesc = forecast.weather.firstOrNull()?.description
 
-    Box(){
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(color = Color(0x66000000)),
+        contentAlignment = Alignment.Center
+    ){
 
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
+
+            Spacer(Modifier.height(16.dp))
 
             Text(text = dayName, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.height(8.dp))
 
             //Small date under
             Text(dateWithoutYear(date),fontSize = 16.sp, fontWeight = FontWeight.Normal,textAlign = TextAlign.Center)
@@ -197,7 +207,7 @@ fun DayView(date: String, forecast: ForecastWeather) {
                     model = iconUrl,
                     contentDescription = "Weather Icon",
                     modifier = Modifier
-                        .size(120.dp)
+                        .size(100.dp)
                 )
             }
 
@@ -298,12 +308,14 @@ fun getDayName(date: String): String {
 }
 
 fun dateWithoutYear(date: String): String {
-    val dateFormat = SimpleDateFormat("MM-dd", Locale.ENGLISH)
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
 
     val parsedDate = dateFormat.parse(date)
 
     if (parsedDate == null) {
         return "Invalid date"
     }
-    return parsedDate.toString()
+
+    val dayFormat = SimpleDateFormat("MM-dd", Locale.ENGLISH)
+    return dayFormat.format(parsedDate)
 }
