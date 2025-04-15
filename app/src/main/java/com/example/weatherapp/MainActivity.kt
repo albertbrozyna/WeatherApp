@@ -249,8 +249,8 @@ fun WeatherInfo(context : Context, weatherResponse: WeatherResponse) {
 
 
     //keys
-    val windUnitsKey = context.getString(R.string.temp_units_key)
-    val tempUnitsKey = context.getString(R.string.wind_units_key)
+    val windUnitsKey = context.getString(R.string.wind_units_key)
+    val tempUnitsKey = context.getString(R.string.temp_units_key)
 
     //units preferences
     val windUnits = loadPreference(context, windUnitsKey) ?: "m/s"

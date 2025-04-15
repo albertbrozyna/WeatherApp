@@ -163,7 +163,7 @@ fun WeekDaysForecast(context: Context, weatherForecast: WeatherForecastList) {
 
             val firstForecast = forecasts.first()
 
-            DayView(date, firstForecast)
+            DayView(context,date, firstForecast)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -174,12 +174,19 @@ fun WeekDaysForecast(context: Context, weatherForecast: WeatherForecastList) {
 
 //One day view
 @Composable
-fun DayView(date: String, forecast: ForecastWeather) {
+fun DayView(context :Context,date: String, forecast: ForecastWeather) {
 
     val dayName = getDayName(date)
     val iconCode = forecast.weather.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/${iconCode}@2x.png"
     val weatherDesc = forecast.weather.firstOrNull()?.description
+
+
+    //keys
+    val tempUnitsKey = context.getString(R.string.temp_units_key)
+
+    //units preferences
+    val tempUnits = loadPreference(context, tempUnitsKey) ?: "metric"
 
     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(color = Color(0x66000000)),
         contentAlignment = Alignment.Center
@@ -199,7 +206,14 @@ fun DayView(date: String, forecast: ForecastWeather) {
             Spacer(Modifier.height(10.dp))
 
             //Temp
-            Text("${forecast.main.temp.toInt()}°C",fontSize = 24.sp, fontWeight = FontWeight.Bold,textAlign = TextAlign.Center)
+
+            val temp = if( tempUnits == "metric"){
+                "${forecast.main.temp.toInt()}°C"
+            }else{
+                convertTemperatureToF(forecast.main.temp)
+            }
+
+            Text(temp,fontSize = 24.sp, fontWeight = FontWeight.Bold,textAlign = TextAlign.Center)
 
             Spacer(Modifier.height(10.dp))
 

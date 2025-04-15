@@ -29,15 +29,14 @@ fun SettingsScreen(modifier: Modifier = Modifier){
 
     //Keys
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
-    val windUnitsKey = context.getString(R.string.temp_units_key)
-    val tempUnitsKey = context.getString(R.string.wind_units_key)
+    val windUnitsKey = context.getString(R.string.wind_units_key)
+    val tempUnitsKey = context.getString(R.string.temp_units_key)
 
     //Refresh time interval default 60 s
     val refreshInterval = remember { mutableStateOf<Int>(
         loadPreference(context,refreshTimeKey)?.toInt() ?: 60)  }
     val windUnits = remember { mutableStateOf(loadPreference(context,windUnitsKey) ?: "mph")}
     val tempUnits = remember { mutableStateOf(loadPreference(context,tempUnitsKey) ?: "metric")}
-
 
     Column(
         modifier = modifier
