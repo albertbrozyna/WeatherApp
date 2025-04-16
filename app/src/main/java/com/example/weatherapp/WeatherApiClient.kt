@@ -44,8 +44,14 @@ suspend fun fetchWeatherForecast(city: String, apiKey: String): WeatherForecastL
 //Data structures
 
 data class WeatherForecastList(
-    val list: List<ForecastWeather>
-) : java.io.Serializable
+    val list: List<ForecastWeather>,
+    val city : City
+) : Serializable
+
+
+data class City(
+    val name : String
+) : Serializable
 
 data class ForecastWeather(
     val dt: Long, val main: Main, val weather: List<Weather>, val dt_txt: String

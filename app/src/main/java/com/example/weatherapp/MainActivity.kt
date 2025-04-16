@@ -2,22 +2,17 @@ package com.example.weatherapp
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,67 +23,40 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.HorizontalAlignmentLine
-import androidx.compose.ui.modifier.ModifierLocalConsumer
-
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.weatherapp.ui.theme.WeatherAppTheme
-import kotlinx.coroutines.launch
-import retrofit2.http.GET
-import retrofit2.http.Query
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle as TxtStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.weatherapp.ui.theme.BottomNavigationBar
+import com.example.weatherapp.ui.theme.WeatherAppTheme
 import kotlinx.coroutines.delay
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.io.Serializable
-import java.text.SimpleDateFormat
+import kotlinx.coroutines.launch
 import java.time.LocalTime
-import java.time.format.TextStyle
-import java.util.Date
-import java.util.Locale
+import androidx.compose.ui.text.TextStyle as TxtStyle
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -124,9 +92,14 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     var weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
     val coroutineScope = rememberCoroutineScope()
     var isLoading = remember { mutableStateOf(false) }
-    val error = remember { mutableStateOf<String?>(null) }
 
+    val error = remember { mutableStateOf<String?>(null) }
+    //List of favorite cities
     var favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
+    //List of weather for favorite cities
+
+    var weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
+
     var showFavorites = remember { mutableStateOf(false) }
     //Keys
     val apiKey = context.getString(R.string.api_key)
@@ -135,26 +108,58 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     //Refresh time
     val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 60L
 
+    val favoriteCitiesWeatherFilename = context.getString(R.string.favorite_cities_weather)
+
     //Delay
     LaunchedEffect(city.value) {
+        val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L).toLong()
+
         while (true) {
-            val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L).toLong()
             delay(delayTime)
 
             if (city.value.isNotEmpty()) {
                 if (isNetworkConnectionAvailable(context)) {
+                    isLoading.value = true
                     val result = fetchWeatherData(city.value, apiKey)
 
-                    if (result != null) {
+                    if (result == null) {
+                        weatherResponse.value = null
+                        error.value = "City not found"
+                    } else {
                         weatherResponse.value = result
-                        saveWeatherData(context, result, filenameWeather)
-                        savePreference(context, lastWeatherCityKey, city.value)
+                        error.value = null
                     }
-                } else {
-                    weatherResponse.value = loadWeatherData(context, filenameWeather)
+
+                    isLoading.value = false
+                    //Saving prefernces
+                    savePreference(context, lastWeatherCityKey, city.value)
+
+                    // Add current city to favorites if not already there
+                    var tempFavCities = favoriteCities.value
+                    if (!favoriteCities.value.contains(city.value)) {
+                        tempFavCities = favoriteCities.value + city.value
+                    }
+
+                    //Fetching data for favorite list
+                    weatherList.value = getWeatherForFavorites(tempFavCities, apiKey)
+
+                    //Saving weather
+                    saveFavoriteWeatherList(context,weatherList.value,favoriteCitiesWeatherFilename)
+
+                } else {    //When connection is not availble
+
                     Toast
-                        .makeText(context, "No internet connection", Toast.LENGTH_SHORT)
+                        .makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_SHORT)
                         .show()
+
+                    //Loading weather for favorites from file
+                    weatherList.value = loadFavoriteWeatherList(context,favoriteCitiesWeatherFilename) ?: emptyList()
+
+                    val cityWeather = weatherList.value.find { it.name.equals(city.value, ignoreCase = true) }
+
+                    if (cityWeather != null) {
+                        weatherResponse.value = cityWeather
+                    }
                 }
             }
         }
@@ -185,9 +190,35 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                 saveWeatherData(context, it, filenameWeather)
             }
             reload.value = false
+
+            // Add current city to favorites if not already there
+            var tempFavCities = favoriteCities.value
+            if (!favoriteCities.value.contains(city.value)) {
+                tempFavCities = favoriteCities.value + city.value
+            }
+
+            //Fetching data for favorite list
+            weatherList.value = getWeatherForFavorites(favoriteCities.value, apiKey)
+
+            //Saving weather
+            saveFavoriteWeatherList(context,weatherList.value,favoriteCitiesWeatherFilename)
+
         } else {
-            weatherResponse.value = loadWeatherData(context, filenameWeather)
-            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG).show()
+            Toast
+                .makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_SHORT)
+                .show()
+
+            //Loading weather for favorites from file
+            weatherList.value = loadFavoriteWeatherList(context,favoriteCitiesWeatherFilename) ?: emptyList()
+
+            val cityWeather = weatherList.value.find { it.name.equals(city.value, ignoreCase = true) }
+
+            //If is saved then load
+            if (cityWeather != null) {
+                isLoading.value = true
+                weatherResponse.value = cityWeather
+                isLoading.value = false
+            }
         }
     }
 
@@ -202,10 +233,21 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
         else -> R.drawable.sky
     }
 
+    //Loading on start
     LaunchedEffect(Unit) {
         //Loading last city
         if (city.value.isNotEmpty()) {
-            weatherResponse.value = loadWeatherData(context, filenameWeather)
+            //Loading weather for favorites from file
+            weatherList.value = loadFavoriteWeatherList(context,favoriteCitiesWeatherFilename) ?: emptyList()
+
+            val cityWeather = weatherList.value.find { it.name.equals(city.value, ignoreCase = true) }
+
+            //If is saved then load
+            if (cityWeather != null) {
+                isLoading.value = true
+                weatherResponse.value = cityWeather
+                isLoading.value = false
+            }
         }
 
         //Checking internet connection on start
@@ -265,13 +307,32 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                                 saveWeatherData(context, it, filenameWeather)
                             }
 
+                            // Add current city to favorites if not already there
+                            var tempFavCities = favoriteCities.value
+                            if (!favoriteCities.value.contains(city.value)) {
+                                tempFavCities = favoriteCities.value + city.value
+                            }
+
+                            //Fetching data for favorite list
+                            weatherList.value = getWeatherForFavorites(favoriteCities.value, apiKey)
+
+                            //Saving weather
+                            saveFavoriteWeatherList(context,weatherList.value,favoriteCitiesWeatherFilename)
                         } else {
-                            weatherResponse.value = loadWeatherData(context, filenameWeather)
-                            Toast.makeText(context, "No internet connection.", Toast.LENGTH_LONG)
-                                .show()
+                            Toast.makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_LONG).show()
+
+                            //Loading weather for favorites from file
+                            weatherList.value = loadFavoriteWeatherList(context,favoriteCitiesWeatherFilename) ?: emptyList()
+
+                            val cityWeather = weatherList.value.find { it.name.equals(city.value, ignoreCase = true) }
+
+                            //If is saved then load
+                            if (cityWeather != null) {
+                                isLoading.value = true
+                                weatherResponse.value = cityWeather
+                                isLoading.value = false
+                            }
                         }
-
-
                     }
                 },
                 modifier = Modifier
@@ -306,152 +367,6 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
         }
     }
 }
-
-
-@Composable
-fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
-    //variables to icon
-    val iconCode = weatherResponse.weather.firstOrNull()?.icon
-    val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
-
-    //keys
-    val windUnitsKey = context.getString(R.string.wind_units_key)
-    val tempUnitsKey = context.getString(R.string.temp_units_key)
-
-    //units preferences
-    val windUnits = loadPreference(context, windUnitsKey) ?: "m/s"
-    val tempUnits = loadPreference(context, tempUnitsKey) ?: "metric"
-
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            weatherResponse.name,
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        Text(
-            "Coordinates\n${weatherResponse.coord.lon}, ${weatherResponse.coord.lat}",
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        AsyncImage(
-            model = iconUrl,
-            contentDescription = "Weather Icon",
-            modifier = Modifier
-                .size(120.dp)
-                .padding(bottom = 8.dp)
-        )
-
-        //For celc
-        if (tempUnits == "metric") {
-            Text(
-                "${weatherResponse.main.temp.toInt()}°C",
-                fontSize = 38.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        } else {
-
-            val tempF = convertTemperatureToF(weatherResponse.main.temp)
-            Text(
-                tempF,
-                fontSize = 38.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        //Description
-        Text(
-            weatherResponse.weather.firstOrNull()?.description ?: "",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 10.dp)
-        )
-
-        //Time
-        Text(
-            text = formatTime(weatherResponse.dt),
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
-
-        HorizontalDivider(
-            thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)
-        )
-
-        Row {
-            Text(
-                "Pressure\n${weatherResponse.main.pressure}",
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-
-            Spacer(Modifier.width(24.dp))
-
-            Text(
-                "Humidity\n${weatherResponse.main.humidity}",
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        HorizontalDivider(
-            thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
-        ) {
-
-            //Wind speed
-            var wind = ""
-            if (windUnits == "mph") {
-                wind = convertWindSpeedToMph(weatherResponse.wind.speed)
-            } else {
-                wind = "${weatherResponse.wind.speed} m/s"
-            }
-            Text(
-                "Wind Speed\n $wind",
-
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-
-            Spacer(Modifier.width(24.dp))
-
-            Text(
-                "Wind Direction\n ${weatherResponse.wind.deg}°",
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-        }
-    }
-}
-
 
 @Composable
 fun CitiesSection(
@@ -609,120 +524,150 @@ fun CitiesSection(
 }
 
 
-suspend fun fetchWeatherData(city: String, apiKey: String): WeatherResponse? {
-    try {
-        val weatherAPI = WeatherApiClient.weatherAPI
-        val response = weatherAPI.getWeatherByCity(city, apiKey)
-
-        return response
-    } catch (e: Exception) {
-        e.printStackTrace()
-
-        if (e.message?.contains("HTTP 404") == true) {
-            return null
-        }
-
-        return null
-    }
-
-}
-
-fun formatTime(unixTime: Long): String {
-    val date = Date(unixTime * 1000)
-    val format = SimpleDateFormat("HH:mm\ndd MMM yyyy", Locale.ENGLISH)
-    return format.format(date)
-}
-
-fun isNetworkConnectionAvailable(context: Context): Boolean {
-    val connectivityManager =
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val network = connectivityManager.activeNetwork
-
-    if (network == null) {
-        return false
-    }
-
-    val capabilities = connectivityManager.getNetworkCapabilities(network)
-
-    if (capabilities == null) {
-        return false
-    }
-
-    return when {
-        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
-        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
-        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
-        else -> false
-    }
-
-}
-
-fun saveWeatherData(context: Context, weatherResponse: WeatherResponse, filename: String) {
-    try {
-        val file = File(context.filesDir, filename)
-
-        val fileOutputStream = FileOutputStream(file)
-
-        val objectOutputStream = ObjectOutputStream(fileOutputStream)
-
-        objectOutputStream.writeObject(weatherResponse)
-        objectOutputStream.close()
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
-
-fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
-
-    try {
-        val file = File(context.filesDir, filename)
-
-        if (file.exists()) {
-            val fileInputStream = FileInputStream(file)
-            val objectInputStream = ObjectInputStream(fileInputStream)
-            val weatherResponse = objectInputStream.readObject() as WeatherResponse
-            objectInputStream.close()
-            return weatherResponse
-
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return null
-}
-
-fun saveFavouriteCities(context: Context, cities: List<String>) {
-    try {
-        val filename = context.getString(R.string.favorite_cities)
-        val file = File(context.filesDir, filename)
-        file.writeText(cities.joinToString("\n"))
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
-
-fun loadFavouriteCities(context: Context): List<String> {
-    try {
-        val filename = context.getString(R.string.favorite_cities)
-
-        val file = File(context.filesDir, filename)
-        if (file.exists()) {
-            return file.readLines()
-        }
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return emptyList()
-}
-
-
-@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    WeatherAppTheme {
-        WeatherForecastScreen()
+fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
+    //variables to icon
+    val iconCode = weatherResponse.weather.firstOrNull()?.icon
+    val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
+
+    //keys
+    val windUnitsKey = context.getString(R.string.wind_units_key)
+    val tempUnitsKey = context.getString(R.string.temp_units_key)
+
+    //units preferences
+    val windUnits = loadPreference(context, windUnitsKey) ?: "m/s"
+    val tempUnits = loadPreference(context, tempUnitsKey) ?: "metric"
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            weatherResponse.name,
+            fontSize = 40.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Text(
+            "${weatherResponse.coord.lon}, ${weatherResponse.coord.lat}",
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
+            fontSize = 24.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        AsyncImage(
+            model = iconUrl,
+            contentDescription = "Weather Icon",
+            modifier = Modifier
+                .size(120.dp)
+                .padding(bottom = 8.dp)
+        )
+
+        //For celc
+        if (tempUnits == "metric") {
+            Text(
+                "${weatherResponse.main.temp.toInt()}°C",
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        } else {
+
+            val tempF = convertTemperatureToF(weatherResponse.main.temp)
+            Text(
+                tempF,
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        //Description
+        Text(
+            weatherResponse.weather.firstOrNull()?.description ?: "",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+
+        //Time
+        Text(
+            text = formatTime(weatherResponse.dt),
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
+            fontSize = 26.sp,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        HorizontalDivider(
+            thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)
+        )
+
+        Row {
+            Text(
+                "Pressure\n${weatherResponse.main.pressure}",
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+            Spacer(Modifier.width(24.dp))
+
+            Text(
+                "Humidity\n${weatherResponse.main.humidity}",
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        HorizontalDivider(
+            thickness = 0.7.dp, color = Color.White, modifier = Modifier.padding(10.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
+        ) {
+
+            //Wind speed
+            var wind = ""
+            wind = if (windUnits == "mph") {
+                convertWindSpeedToMph(weatherResponse.wind.speed)
+            } else {
+                "${weatherResponse.wind.speed} m/s"
+            }
+            Text(
+                "Wind Speed\n $wind",
+
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+            Spacer(Modifier.width(24.dp))
+
+            Text(
+                "Wind Direction\n ${weatherResponse.wind.deg}°",
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+        }
     }
 }
+
+
+
+

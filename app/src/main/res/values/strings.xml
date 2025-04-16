@@ -13,5 +13,7 @@
     <string name="refresh_time_key">refresh_time</string>
     <string name="temp_units_key">temp_units</string>
     <string name="wind_units_key">wind_units</string>
+    <string name="favorite_cities_weather">favorite_cities_weather.txt</string>
+    <string name="favorite_cities_forecast_weather">favorite_cities_forecast_weather.txt</string>
 
 </resources>
