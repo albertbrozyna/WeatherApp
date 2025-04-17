@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeatherAppTheme(darkTheme = true) {
-                var selectedScreen = remember { mutableIntStateOf(0) }
+                val selectedScreen = remember { mutableIntStateOf(0) }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -87,18 +87,18 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
 
-    var city = remember { mutableStateOf(loadPreference(context, lastWeatherCityKey) ?: "") }
-    var weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
+    val city = remember { mutableStateOf(loadPreference(context, lastWeatherCityKey) ?: "") }
+    val weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
     val coroutineScope = rememberCoroutineScope()
-    var isLoading = remember { mutableStateOf(false) }
+    val isLoading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
     //List of favorite cities
-    var favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
+    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     //List of weather for favorite cities
 
-    var weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
+    val weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
 
-    var showFavorites = remember { mutableStateOf(false) }
+    val showFavorites = remember { mutableStateOf(false) }
     //Keys
 
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
@@ -106,11 +106,9 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     //Refresh time
     val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 60L
 
-    val favoriteCitiesWeatherFilename = context.getString(R.string.favorite_cities_weather)
-
     //Delay
     LaunchedEffect(city.value) {
-        val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L).toLong()
+        val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L)
 
         while (true) {
             delay(delayTime)
@@ -345,7 +343,7 @@ fun CitiesSection(
             //Refresh icon
             IconButton(
                 onClick = {
-                    reload.value = true
+                    reload.value = !reload.value
                 }, modifier = Modifier
                     .weight(1f)
                     .padding(0.dp)
@@ -451,7 +449,7 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
 
         Row {
             Text(
-                "Pressure\n${weatherResponse.main.pressure}",
+                "Pressure\n${weatherResponse.main.pressure} hPa",
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
@@ -461,7 +459,7 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
             Spacer(Modifier.width(24.dp))
 
             Text(
-                "Humidity\n${weatherResponse.main.humidity}",
+                "Humidity\n${weatherResponse.main.humidity} %",
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp,
@@ -478,8 +476,7 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
         ) {
 
             //Wind speed
-            var wind = ""
-            wind = if (windUnits == "mph") {
+            val wind = if (windUnits == "mph") {
                 convertWindSpeedToMph(weatherResponse.wind.speed)
             } else {
                 "${weatherResponse.wind.speed} m/s"
