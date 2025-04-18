@@ -70,7 +70,16 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         val delayTime = (refreshIntervalMinutes.toLong() * 60L * 1000L)
         while (true) {
             delay(delayTime)
-            updateWeatherForecast(context,isLoading,city,weatherForecast,error,favoriteCities,weatherForecastList,currentCityShowed)
+            updateWeatherForecast(
+                context,
+                isLoading,
+                city,
+                weatherForecast,
+                error,
+                favoriteCities,
+                weatherForecastList,
+                currentCityShowed
+            )
         }
     }
 
@@ -78,7 +87,16 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val reload = remember { mutableStateOf(false) }
 
     LaunchedEffect(reload.value) {
-        updateWeatherForecast(context,isLoading,city,weatherForecast,error,favoriteCities,weatherForecastList,currentCityShowed)
+        updateWeatherForecast(
+            context,
+            isLoading,
+            city,
+            weatherForecast,
+            error,
+            favoriteCities,
+            weatherForecastList,
+            currentCityShowed
+        )
     }
 
     //Selecting background
@@ -93,7 +111,16 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
 
     //Loading started data
     LaunchedEffect(Unit) {
-        updateWeatherForecast(context,isLoading,city,weatherForecast,error,favoriteCities,weatherForecastList,currentCityShowed)
+        updateWeatherForecast(
+            context,
+            isLoading,
+            city,
+            weatherForecast,
+            error,
+            favoriteCities,
+            weatherForecastList,
+            currentCityShowed
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -121,7 +148,16 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             Button(
                 onClick = {
                     scope.launch {
-                        updateWeatherForecast(context,isLoading,city,weatherForecast,error,favoriteCities,weatherForecastList,currentCityShowed)
+                        updateWeatherForecast(
+                            context,
+                            isLoading,
+                            city,
+                            weatherForecast,
+                            error,
+                            favoriteCities,
+                            weatherForecastList,
+                            currentCityShowed
+                        )
                     }
                 },
                 modifier = Modifier
@@ -143,8 +179,13 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 }
             } else {
                 weatherForecast.value?.let {
-                    WeekDaysForecast(context,currentCityShowed.value, it)
+                    WeekDaysForecast(context, currentCityShowed.value, it)
                 }
+            }
+
+            //Error message
+            error.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -159,14 +200,18 @@ fun WeekDaysForecast(context: Context, city: String, weatherForecast: WeatherFor
             .groupBy { it.dt_txt.substring(0, 10) }.toList().take(7)
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
         //City name
-        Text(text = city, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = city,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            fontSize = 40.sp,
+            fontWeight = FontWeight.Bold
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -201,8 +246,7 @@ fun DayView(context: Context, date: String, forecast: ForecastWeather) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(color = Color(0x66000000)),
-        contentAlignment = Alignment.Center
+            .background(color = Color(0x66000000)), contentAlignment = Alignment.Center
     ) {
 
         Column(
@@ -251,8 +295,7 @@ fun DayView(context: Context, date: String, forecast: ForecastWeather) {
                 AsyncImage(
                     model = iconUrl,
                     contentDescription = "Weather Icon",
-                    modifier = Modifier
-                        .size(100.dp)
+                    modifier = Modifier.size(100.dp)
                 )
             }
 
@@ -272,8 +315,15 @@ fun DayView(context: Context, date: String, forecast: ForecastWeather) {
     }
 }
 
-suspend fun updateWeatherForecast(context: Context, isLoading : MutableState<Boolean>, city : MutableState<String>, weatherForecast :MutableState<WeatherForecastList?>, error : MutableState<String?>, favoriteCities: MutableState<List<String>>,
-                          weatherForecastList : MutableState<List<WeatherForecastList>>,currentCityShowed : MutableState<String>
+suspend fun updateWeatherForecast(
+    context: Context,
+    isLoading: MutableState<Boolean>,
+    city: MutableState<String>,
+    weatherForecast: MutableState<WeatherForecastList?>,
+    error: MutableState<String?>,
+    favoriteCities: MutableState<List<String>>,
+    weatherForecastList: MutableState<List<WeatherForecastList>>,
+    currentCityShowed: MutableState<String>
 ) {
 
     val apiKey = context.getString(R.string.api_key)
@@ -291,7 +341,7 @@ suspend fun updateWeatherForecast(context: Context, isLoading : MutableState<Boo
                 saveWeatherForecastData(context, result, filenameForecast)
                 savePreference(context, lastCityForecastKey, city.value)
                 error.value = null
-            }else{
+            } else {
                 error.value = "City not found"
             }
             isLoading.value = false
@@ -302,20 +352,17 @@ suspend fun updateWeatherForecast(context: Context, isLoading : MutableState<Boo
             }
 
             //Fetching data for favorite list
-            weatherForecastList.value =
-                getWeatherForecastForFavorites(tempFavCities, apiKey)
+            weatherForecastList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
 
             //Saving weather
             saveFavoriteForecastList(context, weatherForecastList.value, filenameForecast)
 
         } else {
-            Toast
-                .makeText(
+            Toast.makeText(
                     context,
                     "No internet connection, displayed data might not be up to date.",
                     Toast.LENGTH_SHORT
-                )
-                .show()
+                ).show()
 
             //Loading forecast data from file
             weatherForecastList.value =
@@ -323,8 +370,7 @@ suspend fun updateWeatherForecast(context: Context, isLoading : MutableState<Boo
 
             val cityForecast = weatherForecastList.value.find {
                 it.city.name.equals(
-                    city.value,
-                    ignoreCase = true
+                    city.value, ignoreCase = true
                 )
             }
 

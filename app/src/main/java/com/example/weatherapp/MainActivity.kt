@@ -51,7 +51,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.weatherapp.ui.theme.BottomNavigationBar
 import com.example.weatherapp.ui.theme.WeatherAppTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,36 +83,36 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WeatherScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
-
     val city = remember { mutableStateOf(loadPreference(context, lastWeatherCityKey) ?: "") }
-    val weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-    val isLoading = remember { mutableStateOf(false) }
-    val error = remember { mutableStateOf<String?>(null) }
-    //List of favorite cities
-    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
-    //List of weather for favorite cities
 
+    val weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
+    //List of weather for favorite cities
     val weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
 
+    val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
+
+    val isLoading = remember { mutableStateOf(false) }
     val showFavorites = remember { mutableStateOf(false) }
+    val error = remember { mutableStateOf<String?>(null) }
+    //List of favorite cities
+
     //Keys
-
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
-
-    //Refresh time
     val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 60L
 
     //Delay
     LaunchedEffect(city.value) {
-        val delayTime =(refreshIntervalMinutes.toLong() * 60L * 1000L)
+        val delayTime = (refreshIntervalMinutes.toLong() * 60L * 1000L)
 
         while (true) {
             delay(delayTime)
             if (city.value.isNotEmpty()) {
-                updateWeather(context,isLoading,city,weatherResponse,error,favoriteCities,weatherList)
+                updateWeather(
+                    context, isLoading, city, weatherResponse, error, favoriteCities, weatherList
+                )
             }
         }
     }
@@ -122,7 +121,7 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     val reload = remember { mutableStateOf(false) }
 
     LaunchedEffect(reload.value) {
-        updateWeather(context,isLoading,city,weatherResponse,error,favoriteCities,weatherList)
+        updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList)
     }
 
     //Selecting background depending on hour
@@ -139,12 +138,13 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) {
         //Loading last city
         if (city.value.isNotEmpty()) {
-            updateWeather(context,isLoading,city,weatherResponse,error,favoriteCities,weatherList)
+            updateWeather(
+                context, isLoading, city, weatherResponse, error, favoriteCities, weatherList
+            )
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
         //Bcg image
         Image(
             painter = painterResource(id = backgroundImage),
@@ -168,7 +168,15 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        updateWeather(context,isLoading,city,weatherResponse,error,favoriteCities,weatherList)
+                        updateWeather(
+                            context,
+                            isLoading,
+                            city,
+                            weatherResponse,
+                            error,
+                            favoriteCities,
+                            weatherList
+                        )
                     }
                 },
                 modifier = Modifier
@@ -504,8 +512,15 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
 }
 
 
-suspend fun updateWeather(context: Context, isLoading : MutableState<Boolean>, city : MutableState<String>, weatherResponse : MutableState<WeatherResponse?>,error : MutableState<String?>,favoriteCities: MutableState<List<String>>,
-                          weatherList : MutableState<List<WeatherResponse>>){
+suspend fun updateWeather(
+    context: Context,
+    isLoading: MutableState<Boolean>,
+    city: MutableState<String>,
+    weatherResponse: MutableState<WeatherResponse?>,
+    error: MutableState<String?>,
+    favoriteCities: MutableState<List<String>>,
+    weatherList: MutableState<List<WeatherResponse>>
+) {
     val apiKey = context.getString(R.string.api_key)
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
     val filenameWeather = context.getString(R.string.last_city_weather_filename)
@@ -542,12 +557,17 @@ suspend fun updateWeather(context: Context, isLoading : MutableState<Boolean>, c
         weatherList.value = getWeatherForFavorites(tempFavCities, apiKey)
 
         //Saving weather
-        saveFavoriteWeatherList(context,weatherList.value,favoriteCitiesWeatherFilename)
+        saveFavoriteWeatherList(context, weatherList.value, favoriteCitiesWeatherFilename)
     } else {
-        Toast.makeText(context, "No internet connection, displayed data might not be up to date.", Toast.LENGTH_LONG).show()
+        Toast.makeText(
+            context,
+            "No internet connection, displayed data might not be up to date.",
+            Toast.LENGTH_LONG
+        ).show()
 
         //Loading weather for favorites from file
-        weatherList.value = loadFavoriteWeatherList(context,favoriteCitiesWeatherFilename) ?: emptyList()
+        weatherList.value =
+            loadFavoriteWeatherList(context, favoriteCitiesWeatherFilename) ?: emptyList()
 
         val cityWeather = weatherList.value.find { it.name.equals(city.value, ignoreCase = true) }
 

@@ -15,10 +15,11 @@ import java.util.Date
 import java.util.Locale
 
 //function to save preferences
-fun savePreference(context : Context,key : String,city : String){
+fun savePreference(context: Context, key: String, city: String) {
     val appName = context.getString(R.string.app_name)
 
-    val sharedPreferences : SharedPreferences = context.getSharedPreferences(appName,Context.MODE_PRIVATE)
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
     sharedPreferences.edit {
         putString(key, city)
@@ -26,11 +27,12 @@ fun savePreference(context : Context,key : String,city : String){
 }
 
 //Function to load preferences
-fun loadPreference(context: Context,key: String) : String?{
+fun loadPreference(context: Context, key: String): String? {
     val appName = context.getString(R.string.app_name)
-    val sharedPreferences : SharedPreferences = context.getSharedPreferences(appName,Context.MODE_PRIVATE)
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
-    return sharedPreferences.getString(key,null)
+    return sharedPreferences.getString(key, null)
 }
 
 
@@ -56,9 +58,7 @@ fun loadWeatherForecastData(context: Context, filename: String): WeatherForecast
 
 //Saving forecast data to file
 fun saveWeatherForecastData(
-    context: Context,
-    weatherForecast: WeatherForecastList,
-    filename: String
+    context: Context, weatherForecast: WeatherForecastList, filename: String
 ) {
     try {
         val file = File(context.filesDir, filename)
@@ -224,7 +224,7 @@ fun loadFavouriteCities(context: Context): List<String> {
 
 
 //Getting weather for favorite list
-suspend fun getWeatherForFavorites(favCities : List<String>,apiKey: String) : List<WeatherResponse>{
+suspend fun getWeatherForFavorites(favCities: List<String>, apiKey: String): List<WeatherResponse> {
     val weatherList = mutableListOf<WeatherResponse>()
 
     for (city in favCities) {
@@ -238,7 +238,9 @@ suspend fun getWeatherForFavorites(favCities : List<String>,apiKey: String) : Li
 }
 
 //To save weather
-fun saveFavoriteWeatherList(context: Context, weatherList: List<WeatherResponse>, filename: String) {
+fun saveFavoriteWeatherList(
+    context: Context, weatherList: List<WeatherResponse>, filename: String
+) {
     try {
         val file = File(context.filesDir, filename)
         val fileOutputStream = FileOutputStream(file)
@@ -272,7 +274,9 @@ fun loadFavoriteWeatherList(context: Context, filename: String): List<WeatherRes
 
 //To save and load forecast
 
-fun saveFavoriteForecastList(context: Context, weatherList: List<WeatherForecastList>, filename: String) {
+fun saveFavoriteForecastList(
+    context: Context, weatherList: List<WeatherForecastList>, filename: String
+) {
     try {
         val file = File(context.filesDir, filename)
         val fileOutputStream = FileOutputStream(file)
@@ -304,7 +308,9 @@ fun loadFavoriteForecastList(context: Context, filename: String): List<WeatherFo
 }
 
 //Getting weather for favorite list
-suspend fun getWeatherForecastForFavorites(favCities : List<String>,apiKey: String) : List<WeatherForecastList>{
+suspend fun getWeatherForecastForFavorites(
+    favCities: List<String>, apiKey: String
+): List<WeatherForecastList> {
     val weatherList = mutableListOf<WeatherForecastList>()
 
     for (city in favCities) {

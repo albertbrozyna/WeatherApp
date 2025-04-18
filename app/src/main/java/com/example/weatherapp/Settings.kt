@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier){
+fun SettingsScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
 
     //Keys
@@ -36,10 +36,11 @@ fun SettingsScreen(modifier: Modifier = Modifier){
     //Refresh time interval default 60 s
     val refreshInterval = remember {
         mutableIntStateOf(
-            loadPreference(context,refreshTimeKey)?.toInt() ?: 5)
+            loadPreference(context, refreshTimeKey)?.toInt() ?: 5
+        )
     }
-    val windUnits = remember { mutableStateOf(loadPreference(context,windUnitsKey) ?: "mph")}
-    val tempUnits = remember { mutableStateOf(loadPreference(context,tempUnitsKey) ?: "metric")}
+    val windUnits = remember { mutableStateOf(loadPreference(context, windUnitsKey) ?: "mph") }
+    val tempUnits = remember { mutableStateOf(loadPreference(context, tempUnitsKey) ?: "metric") }
 
     val scroll = rememberScrollState()
 
@@ -52,7 +53,9 @@ fun SettingsScreen(modifier: Modifier = Modifier){
     ) {
 
 
-        Text("Select Temperature Unit", fontSize = 20.sp,
+        Text(
+            "Select Temperature Unit",
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 16.dp)
         )
@@ -61,58 +64,56 @@ fun SettingsScreen(modifier: Modifier = Modifier){
         Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             //Metric system
             RadioButton(
-                selected = tempUnits.value == "metric",
-                onClick = {
+                selected = tempUnits.value == "metric", onClick = {
                     tempUnits.value = "metric"
                     savePreference(context, tempUnitsKey, "metric")
-                }
-            )
+                })
             Text("Celsius")
 
             Spacer(Modifier.width(16.dp))
 
             RadioButton(
-                selected = tempUnits.value == "imperial",
-                onClick = {
+                selected = tempUnits.value == "imperial", onClick = {
                     tempUnits.value = "imperial"
                     savePreference(context, tempUnitsKey, "imperial")
-                }
-            )
+                })
             Text("Fahrenheit")
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         //Wind units
-        Text("Select Wind Speed Unit", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+        Text(
+            "Select Wind Speed Unit",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
         Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             RadioButton(
-                selected = windUnits.value == "mph",
-                onClick = {
+                selected = windUnits.value == "mph", onClick = {
                     windUnits.value = "mph"
                     savePreference(context, windUnitsKey, "mph")
-                }
-            )
+                })
             Text("mph")
 
 
             Spacer(Modifier.width(16.dp))
 
             RadioButton(
-                selected = windUnits.value == "m/s",
-                onClick = {
+                selected = windUnits.value == "m/s", onClick = {
                     windUnits.value = "m/s"
                     savePreference(context, windUnitsKey, "m/s")
-                }
-            )
+                })
             Text("m/s")
         }
 
         //Refresh time
-        Text("Select Refresh Interval", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+        Text(
+            "Select Refresh Interval",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
@@ -122,12 +123,10 @@ fun SettingsScreen(modifier: Modifier = Modifier){
         Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             intervals.forEach { interval ->
                 RadioButton(
-                    selected = refreshInterval.intValue == interval,
-                    onClick = {
+                    selected = refreshInterval.intValue == interval, onClick = {
                         refreshInterval.intValue = interval
                         savePreference(context, refreshTimeKey, interval.toString())
-                    }
-                )
+                    })
                 Text("$interval min")
 
 
