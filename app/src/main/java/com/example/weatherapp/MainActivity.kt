@@ -64,15 +64,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeatherAppTheme(darkTheme = true) {
+                val context = LocalContext.current
                 val selectedScreen = remember { mutableIntStateOf(0) }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = { BottomNavigationBar(selectedScreen) }) { innerPadding ->
-                    when (selectedScreen.intValue) {
-                        0 -> WeatherScreen(modifier = Modifier.padding(innerPadding))
-                        1 -> WeatherForecastScreen(modifier = Modifier.padding(innerPadding))
-                        2 -> SettingsScreen(modifier = Modifier.padding(innerPadding))
+                val tablet = remember { isTablet(context) }
+
+                if (tablet) {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        bottomBar = { BottomNavigationBarTablet(selectedScreen) }) { innerPadding ->
+                        when (selectedScreen.intValue) {
+                            0 -> WeatherScreen(modifier = Modifier.padding(innerPadding),tablet = true)
+                            1 -> SettingsScreen(modifier = Modifier.padding(innerPadding))
+                        }
+                    }
+                } else {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        bottomBar = { BottomNavigationBar(selectedScreen) }) { innerPadding ->
+                        when (selectedScreen.intValue) {
+                            0 -> WeatherScreen(modifier = Modifier.padding(innerPadding))
+                            1 -> WeatherForecastScreen(modifier = Modifier.padding(innerPadding))
+                            2 -> SettingsScreen(modifier = Modifier.padding(innerPadding))
+                        }
                     }
                 }
             }
@@ -80,8 +94,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 @Composable
-fun WeatherScreen(modifier: Modifier = Modifier) {
+fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     val context: Context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -103,6 +118,14 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
     val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 60L
 
+    //For forecast for tablet
+
+    val weatherForecast = remember { mutableStateOf<WeatherForecastList?>(null) }
+    val weatherForecastList = remember { mutableStateOf<List<WeatherForecastList>>(emptyList()) }
+
+    val currentCityShowed = remember { mutableStateOf("") }
+
+    var unsued = remember { mutableStateOf<Boolean>(false) }
     //Delay
     LaunchedEffect(city.value) {
         val delayTime = (refreshIntervalMinutes.toLong() * 60L * 1000L)
@@ -113,6 +136,20 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                 updateWeather(
                     context, isLoading, city, weatherResponse, error, favoriteCities, weatherList
                 )
+
+                if (tablet) {
+                    updateWeatherForecast(
+                        context,
+                        unsued,
+                        city,
+                        weatherForecast,
+                        error,
+                        favoriteCities,
+                        weatherForecastList,
+                        currentCityShowed
+                    )
+                }
+
             }
         }
     }
@@ -122,6 +159,20 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
 
     LaunchedEffect(reload.value) {
         updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList)
+
+        if (tablet) {
+            updateWeatherForecast(
+                context,
+                unsued,
+                city,
+                weatherForecast,
+                error,
+                favoriteCities,
+                weatherForecastList,
+                currentCityShowed
+            )
+        }
+
     }
 
     //Selecting background depending on hour
@@ -141,6 +192,20 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
             updateWeather(
                 context, isLoading, city, weatherResponse, error, favoriteCities, weatherList
             )
+
+            if (tablet) {
+                updateWeatherForecast(
+                    context,
+                    unsued,
+                    city,
+                    weatherForecast,
+                    error,
+                    favoriteCities,
+                    weatherForecastList,
+                    currentCityShowed
+                )
+            }
+
         }
     }
 
@@ -177,6 +242,19 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                             favoriteCities,
                             weatherList
                         )
+
+                        if(tablet){
+                            updateWeatherForecast(
+                                context,
+                                unsued,
+                                city,
+                                weatherForecast,
+                                error,
+                                favoriteCities,
+                                weatherForecastList,
+                                currentCityShowed
+                            )
+                        }
                     }
                 },
                 modifier = Modifier
@@ -198,8 +276,24 @@ fun WeatherScreen(modifier: Modifier = Modifier) {
                 }
 
             } else {
-                weatherResponse.value?.let {
-                    WeatherInfo(context, it)
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        weatherResponse.value?.let {
+                            WeatherInfo(context, it)
+                        }
+                    }
+
+                    if (tablet) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            weatherForecast.value?.let {
+                                WeekDaysForecast(context, "", it)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -531,7 +625,6 @@ suspend fun updateWeather(
         val result = fetchWeatherData(city.value, apiKey)
 
         if (result == null) {
-            weatherResponse.value = null
             error.value = "City not found"
         } else {
             weatherResponse.value = result

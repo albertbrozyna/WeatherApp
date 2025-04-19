@@ -322,3 +322,7 @@ suspend fun getWeatherForecastForFavorites(
 
     return weatherList
 }
+
+fun isTablet(context: Context): Boolean {
+    return context.resources.configuration.smallestScreenWidthDp >= 600
+}
