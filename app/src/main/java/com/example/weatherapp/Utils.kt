@@ -113,10 +113,10 @@ fun convertWindSpeedToMph(speed: Float): String {
 
 }
 
-suspend fun fetchWeatherData(city: String, apiKey: String): WeatherResponse? {
+suspend fun fetchWeatherData(lat : Double, lon : Double, apiKey: String): WeatherResponse? {
     try {
         val weatherAPI = WeatherApiClient.weatherAPI
-        val response = weatherAPI.getWeatherByCity(city, apiKey)
+        val response = weatherAPI.getWeatherByCoordinates(lat = lat, lon = lon, apiKey = apiKey)
 
         return response
     } catch (e: Exception) {
@@ -196,39 +196,53 @@ fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
     return null
 }
 
-fun saveFavouriteCities(context: Context, cities: List<String>) {
+fun saveFavouriteCities(context: Context, cities: List<Coord>) {
     try {
         val filename = context.getString(R.string.favorite_cities)
         val file = File(context.filesDir, filename)
-        file.writeText(cities.joinToString("\n"))
 
+        val lines = cities.map { "${it.lat},${it.lon}" }
+        file.writeText(lines.joinToString("\n"))
     } catch (e: Exception) {
         e.printStackTrace()
     }
 }
 
-fun loadFavouriteCities(context: Context): List<String> {
-    try {
-        val filename = context.getString(R.string.favorite_cities)
 
+
+fun loadFavouriteCities(context: Context): List<Coord> {
+    return try {
+        val filename = context.getString(R.string.favorite_cities)
         val file = File(context.filesDir, filename)
+
         if (file.exists()) {
-            return file.readLines()
+            file.readLines().mapNotNull { line ->
+                val parts = line.split(",")
+                if (parts.size == 2) {
+                    val lat = parts[0].toFloatOrNull()
+                    val lon = parts[1].toFloatOrNull()
+                    if (lat != null && lon != null) {
+                        Coord(lon, lat)
+                    } else null
+                } else null
+            }
+        } else {
+            emptyList()
         }
-
     } catch (e: Exception) {
         e.printStackTrace()
+        emptyList()
     }
-    return emptyList()
 }
+
 
 
 //Getting weather for favorite list
-suspend fun getWeatherForFavorites(favCities: List<String>, apiKey: String): List<WeatherResponse> {
+suspend fun getWeatherForFavorites(favCities: List<Coord>, apiKey: String): List<WeatherResponse> {
     val weatherList = mutableListOf<WeatherResponse>()
 
     for (city in favCities) {
-        val response = fetchWeatherData(city, apiKey)
+        val response = fetchWeatherData(lat = city.lat, lon = city.lon, apiKey)
         if (response != null) {
             weatherList.add(response)
         }
@@ -325,4 +339,17 @@ suspend fun getWeatherForecastForFavorites(
 
 fun isTablet(context: Context): Boolean {
     return context.resources.configuration.smallestScreenWidthDp >= 600
+}
+
+// Fetch cities for search
+suspend fun searchCitiesByName(context: Context,cityName: String): List<GeoCity> {
+
+    val apiKey = context.getString(R.string.api_key)
+
+    return try {
+        WeatherApiClient.geocodingAPI.getCityCoordinates(cityName, 10, apiKey)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
 }

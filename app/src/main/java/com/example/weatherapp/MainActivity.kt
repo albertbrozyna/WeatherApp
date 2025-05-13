@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,12 +39,13 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +60,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import androidx.compose.ui.text.TextStyle as TxtStyle
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.DefaultLifecycleObserver
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -94,7 +100,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     val context: Context = LocalContext.current
@@ -113,6 +118,12 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     val showFavorites = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
     //List of favorite cities
+
+    //List of cities when we are looking
+    var cityList =  remember { mutableStateOf<List<GeoCity>>(emptyList()) }
+    var expanded = remember { mutableStateOf(false) }
+    var lat = remember { mutableDoubleStateOf(0.0) }
+    var lon = remember { mutableDoubleStateOf(0.0) }
 
     //Keys
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
@@ -134,33 +145,30 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
             delay(delayTime)
             if (city.value.isNotEmpty()) {
                 updateWeather(
-                    context, isLoading, city, weatherResponse, error, favoriteCities, weatherList
+                    context, isLoading, city, weatherResponse, error, favoriteCities, weatherList, lat = lat, lon = lon
                 )
 
-                if (tablet) {
-                    updateWeatherForecast(
-                        context,
-                        unsued,
-                        city,
-                        weatherForecast,
-                        error,
-                        favoriteCities,
-                        weatherForecastList,
-                        currentCityShowed
-                    )
-                }
+                updateWeatherForecast(
+                    context,
+                    unsued,
+                    city,
+                    weatherForecast,
+                    error,
+                    favoriteCities,
+                    weatherForecastList,
+                    currentCityShowed
+                )
 
             }
         }
     }
 
-    //reload functionality to tell if wee need to update UI
-    val reload = remember { mutableStateOf(false) }
+    // Fetching weather for city
 
-    LaunchedEffect(reload.value) {
-        updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList)
+    LaunchedEffect(lat.value,lon.value) {
+        if (lat.value != 0.0 && lon.value != 0.0) {
+            updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
 
-        if (tablet) {
             updateWeatherForecast(
                 context,
                 unsued,
@@ -172,7 +180,25 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                 currentCityShowed
             )
         }
+    }
 
+    //reload functionality to tell if wee need to update UI
+    val reload = remember { mutableStateOf(false) }
+
+    LaunchedEffect(reload.value) {
+        updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
+
+
+        updateWeatherForecast(
+            context,
+            unsued,
+            city,
+            weatherForecast,
+            error,
+            favoriteCities,
+            weatherForecastList,
+            currentCityShowed
+        )
     }
 
     //Selecting background depending on hour
@@ -190,11 +216,10 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
         //Loading last city
         if (city.value.isNotEmpty()) {
             updateWeather(
-                context, isLoading, city, weatherResponse, error, favoriteCities, weatherList
+                context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon
             )
 
-            if (tablet) {
-                updateWeatherForecast(
+            updateWeatherForecast(
                     context,
                     unsued,
                     city,
@@ -203,8 +228,8 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                     favoriteCities,
                     weatherForecastList,
                     currentCityShowed
-                )
-            }
+            )
+
 
         }
     }
@@ -227,34 +252,17 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                 .padding(16.dp)
         ) {
 
-            CitiesSection(favoriteCities, showFavorites, city, context, reload)
+            CitiesSection(favoriteCities, showFavorites, city, context, reload,expanded)
 
             //Button to get weather
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        updateWeather(
-                            context,
-                            isLoading,
-                            city,
-                            weatherResponse,
-                            error,
-                            favoriteCities,
-                            weatherList
-                        )
+                        // Fetch available cities
+                        cityList.value = searchCitiesByName(context = context,cityName = city.value)
 
-                        if(tablet){
-                            updateWeatherForecast(
-                                context,
-                                unsued,
-                                city,
-                                weatherForecast,
-                                error,
-                                favoriteCities,
-                                weatherForecastList,
-                                currentCityShowed
-                            )
-                        }
+                        // Show menu with cities
+                        expanded.value = true
                     }
                 },
                 modifier = Modifier
@@ -264,6 +272,10 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
             ) {
                 Text("Get Weather", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
+
+            // Dropdown menu with available cities
+
+            ShowFoundCities(cityList.value,expanded,city,lat, lon)
 
             //Is loading text
             if (isLoading.value) {
@@ -313,6 +325,7 @@ fun CitiesSection(
     city: MutableState<String>,
     context: Context,
     reload: MutableState<Boolean>,
+    expanded: MutableState<Boolean>
 ) {
 
     Column(
@@ -383,7 +396,12 @@ fun CitiesSection(
                 textStyle = TxtStyle(fontSize = 20.sp),
                 modifier = Modifier
                     .weight(7f)
-                    .padding(top = 6.dp),
+                    .padding(top = 6.dp)
+                    .onFocusChanged { focusState -> // If we lost focus list is not showing
+                        if (!focusState.isFocused) {
+                            expanded.value = false
+                        }
+                    },
                 shape = RoundedCornerShape(6.dp),
                 singleLine = true
             )
@@ -613,7 +631,9 @@ suspend fun updateWeather(
     weatherResponse: MutableState<WeatherResponse?>,
     error: MutableState<String?>,
     favoriteCities: MutableState<List<String>>,
-    weatherList: MutableState<List<WeatherResponse>>
+    weatherList: MutableState<List<WeatherResponse>>,
+    lat: MutableState<Double>,          // Added a lat and lot to seraching
+    lon: MutableState<Double>
 ) {
     val apiKey = context.getString(R.string.api_key)
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
@@ -622,7 +642,7 @@ suspend fun updateWeather(
 
     if (isNetworkConnectionAvailable(context)) {
         isLoading.value = true
-        val result = fetchWeatherData(city.value, apiKey)
+        val result = fetchWeatherData(lat = lat.value, lon = lon.value, apiKey = apiKey)
 
         if (result == null) {
             error.value = "City not found"
@@ -640,9 +660,9 @@ suspend fun updateWeather(
             saveWeatherData(context, it, filenameWeather)
         }
 
-        // Add current city to favorites if not already there
+        // Add current city to favorites if not already there and if exists
         var tempFavCities = favoriteCities.value
-        if (!favoriteCities.value.contains(city.value)) {
+        if (!favoriteCities.value.contains(city.value) && result != null) {
             tempFavCities = favoriteCities.value + city.value
         }
 
@@ -673,5 +693,40 @@ suspend fun updateWeather(
     }
 }
 
+
+@Composable
+fun ShowFoundCities(
+    cities: List<GeoCity>,
+    expanded: MutableState<Boolean>,
+    selectedCity: MutableState<String>,
+    lat: MutableState<Double>,
+    lon: MutableState<Double>
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+
+        DropdownMenu(
+            expanded = expanded.value,
+            onDismissRequest = {
+                expanded.value = false
+            }, // Dismiss the dropdown when clicking outside
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // For each city in the city list, create a DropdownMenuItem
+            cities.forEach { city ->
+                DropdownMenuItem(
+                    onClick = {
+                        selectedCity.value = city.name
+                        lon.value = city.lon
+                        lat.value = city.lat
+                        expanded.value = false
+
+
+                    },
+                    text = { Text(city.name + " Country: " + city.country + " State: " + city.state ) }
+                )
+            }
+        }
+    }
+}
 
 

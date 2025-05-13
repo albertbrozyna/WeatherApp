@@ -8,25 +8,26 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 import java.io.Serializable
 
-object WeatherApiClient{
+object WeatherApiClient {
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
-        .build()
+    private val okHttpClient = OkHttpClient.Builder().addInterceptor(loggingInterceptor).build()
 
     private const val URL = "https://api.openweathermap.org"
 
-    val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(URL)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    val retrofit: Retrofit =
+        Retrofit.Builder().baseUrl(URL).addConverterFactory(GsonConverterFactory.create()).build()
 
-    val weatherAPI : WeatherAPI = retrofit.create(WeatherAPI::class.java)
-    val weatherForecastAPI : WeatherForecastAPI = retrofit.create(WeatherForecastAPI::class.java)
+    // Api for weather
+    val weatherAPI: WeatherAPI = retrofit.create(WeatherAPI::class.java)
+
+    // Geocoding API
+    val geocodingAPI: GeocodingAPI = retrofit.create(GeocodingAPI::class.java)
+
+    val weatherForecastAPI: WeatherForecastAPI = retrofit.create(WeatherForecastAPI::class.java)
 }
 
 //Getting forecast for next days
@@ -44,13 +45,12 @@ suspend fun fetchWeatherForecast(city: String, apiKey: String): WeatherForecastL
 //Data structures
 
 data class WeatherForecastList(
-    val list: List<ForecastWeather>,
-    val city : City
+    val list: List<ForecastWeather>, val city: City
 ) : Serializable
 
 
 data class City(
-    val name : String
+    val name: String
 ) : Serializable
 
 data class ForecastWeather(
@@ -64,6 +64,28 @@ interface WeatherForecastAPI {
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
     ): WeatherForecastList
+
+
+}
+
+
+// Classes for fetching multiple cities
+data class GeoCity(
+    val name: String,
+    val lat: Double,
+    val lon: Double,
+    val country: String,
+    val state: String? = null
+) : Serializable
+
+// For searching cities max 10
+interface GeocodingAPI {
+    @GET("/geo/1.0/direct")
+    suspend fun getCityCoordinates(
+        @Query("q") cityName: String,
+        @Query("limit") limit: Int = 10,
+        @Query("appid") apiKey: String
+    ): List<GeoCity>
 }
 
 data class WeatherResponse(
@@ -81,8 +103,7 @@ data class Main(
 ) : Serializable
 
 data class Coord(
-    val lon: Float,
-    val lat: Float
+    val lon: Float, val lat: Float
 ) : Serializable
 
 data class Weather(
@@ -98,6 +119,15 @@ interface WeatherAPI {
     @GET("data/2.5/weather")
     suspend fun getWeatherByCity(
         @Query("q") city: String,
+        @Query("appid") apiKey: String,
+        @Query("units") units: String = "metric"
+    ): WeatherResponse
+
+    // Finding by coordinates
+    @GET("data/2.5/weather")
+    suspend fun getWeatherByCoordinates(
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
     ): WeatherResponse

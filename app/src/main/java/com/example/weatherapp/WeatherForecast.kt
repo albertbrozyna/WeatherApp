@@ -56,6 +56,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     val showFavorites = remember { mutableStateOf(false) }
 
+    var expanded = remember { mutableStateOf(false) }
 
     val isLoading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
@@ -145,7 +146,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 .verticalScroll(scroll),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CitiesSection(favoriteCities, showFavorites, city, context, reload)
+            CitiesSection(favoriteCities, showFavorites, city, context, reload,expanded)
 
             //Button to get forecast weather
             Button(
