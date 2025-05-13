@@ -4,8 +4,11 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,7 +47,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val lastCityForecastKey = context.getString(R.string.last_city_forecast)
+    val lastCityForecastKey = context.getString(R.string.last_city_weather_key)
     val city = remember { mutableStateOf(loadPreference(context, lastCityForecastKey) ?: "") }
 
     val weatherForecast = remember { mutableStateOf<WeatherForecastList?>(null) }
@@ -215,13 +218,17 @@ fun WeekDaysForecast(context: Context, city: String, weatherForecast: WeatherFor
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        selectedDates.forEach { (date, forecasts) ->
-
-            val firstForecast = forecasts.first()
-
-            DayView(context, date, firstForecast)
-
-            Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            selectedDates.forEach { (date, forecasts) ->
+                val firstForecast = forecasts.first()
+                DayView(context, date, firstForecast)
+            }
         }
     }
 }
@@ -245,14 +252,17 @@ fun DayView(context: Context, date: String, forecast: ForecastWeather) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 14.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(color = Color(0x66000000)), contentAlignment = Alignment.Center
+
     ) {
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp)),
+                .clip(RoundedCornerShape(20.dp))
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -327,7 +337,7 @@ suspend fun updateWeatherForecast(
 ) {
 
     val apiKey = context.getString(R.string.api_key)
-    val lastCityForecastKey = context.getString(R.string.last_city_forecast)
+    val lastCityForecastKey = context.getString(R.string.last_city_weather_key)
     val filenameForecast = context.getString(R.string.last_city_forecast)
 
     if (city.value.isNotEmpty()) {
