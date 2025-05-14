@@ -31,11 +31,10 @@ object WeatherApiClient {
 }
 
 //Getting forecast for next days
-suspend fun fetchWeatherForecast(city: String, apiKey: String): WeatherForecastList? {
+suspend fun fetchWeatherForecast(lat : Float,lon: Float, apiKey: String): WeatherForecastList? {
     return try {
         val weatherForecastAPI = WeatherApiClient.weatherForecastAPI
-        weatherForecastAPI.getWeatherForecastByCity(city, apiKey)
-
+        weatherForecastAPI.getWeatherForecastByCoordinates(lat = lat,lon = lon,apiKey)
     } catch (e: Exception) {
         e.printStackTrace()
         null
@@ -59,13 +58,12 @@ data class ForecastWeather(
 
 interface WeatherForecastAPI {
     @GET("data/2.5/forecast")
-    suspend fun getWeatherForecastByCity(
-        @Query("q") city: String,
+    suspend fun getWeatherForecastByCoordinates(
+        @Query("lat") lat: Float,
+        @Query("lon") lon: Float,
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
     ): WeatherForecastList
-
-
 }
 
 // Classes for fetching multiple cities
@@ -121,13 +119,6 @@ data class Sys(
 
 
 interface WeatherAPI {
-    @GET("data/2.5/weather")
-    suspend fun getWeatherByCity(
-        @Query("q") city: String,
-        @Query("appid") apiKey: String,
-        @Query("units") units: String = "metric"
-    ): WeatherResponse
-
     // Finding by coordinates
     @GET("data/2.5/weather")
     suspend fun getWeatherByCoordinates(
@@ -136,8 +127,6 @@ interface WeatherAPI {
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
     ): WeatherResponse
-
-
 
     @GET("/geo/1.0/reverse")
     suspend fun reverseGeocoding(

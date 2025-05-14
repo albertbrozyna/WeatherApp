@@ -154,7 +154,9 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                     error,
                     favoriteCities,
                     weatherForecastList,
-                    currentCityShowed
+                    currentCityShowed,
+                    lat,
+                    lon
                 )
 
             }
@@ -175,7 +177,9 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                 error,
                 favoriteCities,
                 weatherForecastList,
-                currentCityShowed
+                currentCityShowed,
+                lat,
+                lon
             )
         }
     }
@@ -195,7 +199,9 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
             error,
             favoriteCities,
             weatherForecastList,
-            currentCityShowed
+            currentCityShowed,
+            lat,
+            lon
         )
     }
 
@@ -225,7 +231,9 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                     error,
                     favoriteCities,
                     weatherForecastList,
-                    currentCityShowed
+                    currentCityShowed,
+                    lat,
+                    lon
             )
 
 
@@ -679,7 +687,7 @@ suspend fun updateWeather(
         }
 
         isLoading.value = false
-        // Saving prefernces
+        // Saving preferences
         savePreference(context, lastWeatherCityKey, city.value)
 
         // Saving weather
@@ -715,7 +723,7 @@ suspend fun updateWeather(
             Toast.LENGTH_LONG
         ).show()
 
-        //Loading weather for favorites from file
+        // Loading weather for favorites from file
         weatherList.value =
             loadFavoriteWeatherList(context, favoriteCitiesWeatherFilename) ?: emptyList()
 

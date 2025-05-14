@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.core.content.edit
+import com.google.gson.Gson
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -14,25 +15,30 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-//function to save preferences
-fun savePreference(context: Context, key: String, city: String) {
+// function to save preferences
+fun savePreference(context: Context, key: String, city: GeoCity) {
+    val gson = Gson()
+    val json = gson.toJson(city) // Serialize GeoCity to JSON
+
     val appName = context.getString(R.string.app_name)
+    val sharedPreferences = context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
-    val sharedPreferences: SharedPreferences =
-        context.getSharedPreferences(appName, Context.MODE_PRIVATE)
-
-    sharedPreferences.edit {
-        putString(key, city)
-    }
+    sharedPreferences.edit().putString(key, json).apply()
 }
 
-//Function to load preferences
-fun loadPreference(context: Context, key: String): String? {
+// Function to load preferences
+fun loadPreference(context: Context, key: String): GeoCity? {
+    val gson = Gson()
     val appName = context.getString(R.string.app_name)
-    val sharedPreferences: SharedPreferences =
-        context.getSharedPreferences(appName, Context.MODE_PRIVATE)
+    val sharedPreferences = context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
-    return sharedPreferences.getString(key, null)
+    val json = sharedPreferences.getString(key, null)
+
+    return if (json != null) {
+        gson.fromJson(json, GeoCity::class.java)
+    } else {
+        null
+    }
 }
 
 
@@ -56,7 +62,7 @@ fun loadWeatherForecastData(context: Context, filename: String): WeatherForecast
     return null
 }
 
-//Saving forecast data to file
+// Saving forecast data to file
 fun saveWeatherForecastData(
     context: Context, weatherForecast: WeatherForecastList, filename: String
 ) {
@@ -330,12 +336,12 @@ fun loadFavoriteForecastList(context: Context, filename: String): List<WeatherFo
 
 //Getting weather for favorite list
 suspend fun getWeatherForecastForFavorites(
-    favCities: List<String>, apiKey: String
+    favCities: List<GeoCity>, apiKey: String
 ): List<WeatherForecastList> {
     val weatherList = mutableListOf<WeatherForecastList>()
 
     for (city in favCities) {
-        val response = fetchWeatherForecast(city, apiKey)
+        val response = fetchWeatherForecast(city.lat, city.lon, apiKey)
         if (response != null) {
             weatherList.add(response)
         }

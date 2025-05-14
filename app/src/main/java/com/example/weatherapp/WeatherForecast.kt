@@ -68,7 +68,6 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
 
     val currentCityShowed = remember { mutableStateOf("") }
 
-
     //Refresh key and interval
 
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
@@ -87,7 +86,9 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 error,
                 favoriteCities,
                 weatherForecastList,
-                currentCityShowed
+                currentCityShowed,
+                lat,
+                lon
             )
         }
     }
@@ -104,11 +105,33 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             error,
             favoriteCities,
             weatherForecastList,
-            currentCityShowed
+            currentCityShowed,
+            lat,
+            lon
         )
     }
 
-    //Selecting background
+    LaunchedEffect(lat.floatValue,lon.floatValue) {
+        if (city.value.isNotEmpty() && lat.floatValue != 0.0f && lon.floatValue != 0.0f) {
+
+            updateWeatherForecast(
+                context,
+                isLoading,
+                city,
+                weatherForecast,
+                error,
+                favoriteCities,
+                weatherForecastList,
+                currentCityShowed,
+                lat,
+                lon
+            )
+        }
+    }
+
+
+
+    // Selecting background depending on a hour
     val currentHour = remember { LocalTime.now().hour }
 
     val backgroundImage = when (currentHour) {
@@ -128,7 +151,9 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             error,
             favoriteCities,
             weatherForecastList,
-            currentCityShowed
+            currentCityShowed,
+            lat,
+            lon
         )
     }
 
@@ -151,22 +176,17 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 .verticalScroll(scroll),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CitiesSection(favoriteCities, showFavorites, city, context, reload,expanded)
+            CitiesSection(favoriteCities, showFavorites,  context, reload,expanded,city,lat,lon)
 
             //Button to get forecast weather
             Button(
                 onClick = {
                     scope.launch {
-                        updateWeatherForecast(
-                            context,
-                            isLoading,
-                            city,
-                            weatherForecast,
-                            error,
-                            favoriteCities,
-                            weatherForecastList,
-                            currentCityShowed
-                        )
+                        // Fetch available cities
+                        cityList.value = searchCitiesByName(context = context,cityName = city.value)
+
+                        // Show menu with cities
+                        expanded.value = true
                     }
                 },
                 modifier = Modifier
@@ -176,6 +196,9 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             ) {
                 Text("Get weather forecast", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             }
+
+            // Dropdown menu with available cities
+            ShowFoundCities(cityList.value,expanded,city,lat, lon)
 
 
             if (isLoading.value) {
@@ -382,7 +405,7 @@ suspend fun updateWeatherForecast(
             }
 
             //Fetching data for favorite list
-            weatherList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
+            weatherForecastList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
 
             //Saving weather
             saveFavoriteForecastList(context, weatherForecastList.value, filenameForecast)
