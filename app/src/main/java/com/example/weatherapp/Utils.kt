@@ -245,7 +245,7 @@ fun loadFavouriteCities(context: Context): List<GeoCity> {
 
 
 //Getting weather for favorite list
-suspend fun getWeatherForFavorites(favCities: List<Coord>, apiKey: String): List<WeatherResponse> {
+suspend fun getWeatherForFavorites(favCities: List<GeoCity>, apiKey: String): List<WeatherResponse> {
     val weatherList = mutableListOf<WeatherResponse>()
 
     for (city in favCities) {

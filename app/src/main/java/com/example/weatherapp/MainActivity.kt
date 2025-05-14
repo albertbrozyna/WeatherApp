@@ -8,7 +8,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +38,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +60,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import androidx.compose.ui.text.TextStyle as TxtStyle
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.DefaultLifecycleObserver
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -166,7 +163,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
 
     // Fetching weather for city
 
-    LaunchedEffect(lat.value,lon.value) {
+    LaunchedEffect(lat.floatValue,lon.floatValue) {
         if (lat.floatValue != 0.0f && lon.floatValue != 0.0f) {
             updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
 
@@ -330,7 +327,6 @@ fun CitiesSection(
     lat : MutableState<Float>,
     lon : MutableState<Float>
 ) {
-    val apiKey =  context.getString(R.string.api_key)
     val coroutineScope = rememberCoroutineScope()
 
 
@@ -339,7 +335,6 @@ fun CitiesSection(
         ) {
         //Favorities list
         if (showFavorites.value) {
-
             Text(
                 "Favourite cities:", modifier = Modifier.padding(8.dp)
             )
@@ -387,7 +382,6 @@ fun CitiesSection(
                     }
 
                 }
-
             }
         }
 
@@ -663,7 +657,7 @@ suspend fun updateWeather(
     error: MutableState<String?>,
     favoriteCities: MutableState<List<GeoCity>>,
     weatherList: MutableState<List<WeatherResponse>>,
-    lat: MutableState<Float>,          // Added a lat and lot to seraching
+    lat: MutableState<Float>,          // Added a lat and lot to searching
     lon: MutableState<Float>
 ) {
     val apiKey = context.getString(R.string.api_key)
@@ -685,18 +679,28 @@ suspend fun updateWeather(
         }
 
         isLoading.value = false
-        //Saving prefernces
+        // Saving prefernces
         savePreference(context, lastWeatherCityKey, city.value)
 
-        //Saving weather
+        // Saving weather
         weatherResponse.value?.let {
             saveWeatherData(context, it, filenameWeather)
         }
 
-        // Add current city to favorites if not already there and if exists
+        // Creating a tempFavCities only for fetching weather for the last city
         var tempFavCities = favoriteCities.value
-        if (!favoriteCities.value.contains(city.value) && result != null) {
-            tempFavCities = favoriteCities.value + city.value
+
+        // Add current city to favorites, if not exists to store the weather here for the last city
+        val existsInFavourites = favoriteCities.value.any { fav ->
+            fav.lat == lat.value && fav.lon == lon.value
+        }
+
+        if (!existsInFavourites) {   // If don't exists in fav
+
+            val result = checkIfCityExists(context, lon = lon.value, lat = lat.value)
+            if (result != null) { // If exists add it to temp list
+                tempFavCities = favoriteCities.value + result
+            }
         }
 
         //Fetching data for favorite list

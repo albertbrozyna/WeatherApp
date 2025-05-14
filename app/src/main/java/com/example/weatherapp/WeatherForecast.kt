@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,7 +57,11 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
     val showFavorites = remember { mutableStateOf(false) }
 
+    //List of cities when we are looking
+    var cityList =  remember { mutableStateOf<List<GeoCity>>(emptyList()) }
     var expanded = remember { mutableStateOf(false) }
+    var lat = remember { mutableFloatStateOf(0.0f) }
+    var lon = remember { mutableFloatStateOf(0.0f) }
 
     val isLoading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
@@ -332,9 +337,11 @@ suspend fun updateWeatherForecast(
     city: MutableState<String>,
     weatherForecast: MutableState<WeatherForecastList?>,
     error: MutableState<String?>,
-    favoriteCities: MutableState<List<String>>,
+    favoriteCities: MutableState<List<GeoCity>>,
     weatherForecastList: MutableState<List<WeatherForecastList>>,
-    currentCityShowed: MutableState<String>
+    currentCityShowed: MutableState<String>,
+    lat: MutableState<Float>,          // Added a lat and lot to searching
+    lon: MutableState<Float>
 ) {
 
     val apiKey = context.getString(R.string.api_key)
@@ -344,7 +351,7 @@ suspend fun updateWeatherForecast(
     if (city.value.isNotEmpty()) {
         if (isNetworkConnectionAvailable(context)) {
             isLoading.value = true
-            val result = fetchWeatherForecast(city.value, apiKey)
+            val result = fetchWeatherForecast(lat = lat.value, lon = lon.value, apiKey)
 
             if (result != null) {
                 weatherForecast.value = result
@@ -356,18 +363,29 @@ suspend fun updateWeatherForecast(
                 error.value = "City not found"
             }
             isLoading.value = false
-            // Add current city to save
+
+
+            // Creating a tempFavCities only for fetching weather for the last city
             var tempFavCities = favoriteCities.value
-            if (!favoriteCities.value.contains(city.value)) {
-                tempFavCities = favoriteCities.value + city.value
+
+            // Add current city to favorites, if not exists to store the weather here for the last city
+            val existsInFavourites = favoriteCities.value.any { fav ->
+                fav.lat == lat.value && fav.lon == lon.value
+            }
+
+            if (!existsInFavourites) {   // If don't exists in fav
+
+                val result = checkIfCityExists(context, lon = lon.value, lat = lat.value)
+                if (result != null) { // If exists add it to temp list
+                    tempFavCities = favoriteCities.value + result
+                }
             }
 
             //Fetching data for favorite list
-            weatherForecastList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
+            weatherList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
 
             //Saving weather
             saveFavoriteForecastList(context, weatherForecastList.value, filenameForecast)
-
         } else {
             Toast.makeText(
                     context,
