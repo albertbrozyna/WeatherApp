@@ -113,7 +113,7 @@ fun convertWindSpeedToMph(speed: Float): String {
 
 }
 
-suspend fun fetchWeatherData(lat : Double, lon : Double, apiKey: String): WeatherResponse? {
+suspend fun fetchWeatherData(lat : Float, lon : Float, apiKey: String): WeatherResponse? {
     try {
         val weatherAPI = WeatherApiClient.weatherAPI
         val response = weatherAPI.getWeatherByCoordinates(lat = lat, lon = lon, apiKey = apiKey)
@@ -196,12 +196,16 @@ fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
     return null
 }
 
-fun saveFavouriteCities(context: Context, cities: List<Coord>) {
+fun saveFavouriteCities(context: Context, cities: List<GeoCity>) {
     try {
         val filename = context.getString(R.string.favorite_cities)
         val file = File(context.filesDir, filename)
 
-        val lines = cities.map { "${it.lat},${it.lon}" }
+        val lines = cities.map { city ->
+            val statePart = city.state?.let { ",$it" } ?: ""
+            "${city.name},${city.lat},${city.lon},${city.country}$statePart"
+        }
+
         file.writeText(lines.joinToString("\n"))
     } catch (e: Exception) {
         e.printStackTrace()
@@ -209,8 +213,7 @@ fun saveFavouriteCities(context: Context, cities: List<Coord>) {
 }
 
 
-
-fun loadFavouriteCities(context: Context): List<Coord> {
+fun loadFavouriteCities(context: Context): List<GeoCity> {
     return try {
         val filename = context.getString(R.string.favorite_cities)
         val file = File(context.filesDir, filename)
@@ -218,11 +221,15 @@ fun loadFavouriteCities(context: Context): List<Coord> {
         if (file.exists()) {
             file.readLines().mapNotNull { line ->
                 val parts = line.split(",")
-                if (parts.size == 2) {
-                    val lat = parts[0].toFloatOrNull()
-                    val lon = parts[1].toFloatOrNull()
+                if (parts.size >= 4) {
+                    val name = parts[0].trim()
+                    val lat = parts[1].toFloatOrNull()
+                    val lon = parts[2].toFloatOrNull()
+                    val country = parts[3].trim()
+                    val state = if (parts.size > 4) parts[4].trim() else null
+
                     if (lat != null && lon != null) {
-                        Coord(lon, lat)
+                        GeoCity(name, lat, lon, country, state)
                     } else null
                 } else null
             }
@@ -351,5 +358,34 @@ suspend fun searchCitiesByName(context: Context,cityName: String): List<GeoCity>
     } catch (e: Exception) {
         e.printStackTrace()
         emptyList()
+    }
+}
+
+// Check if city exists using reverse
+
+suspend fun checkIfCityExists(context: Context, lon: Float, lat: Float): GeoCity? {
+    return try {
+        val apiKey = context.getString(R.string.api_key)
+
+        val weatherAPI = WeatherApiClient.weatherAPI
+        val response = weatherAPI.reverseGeocoding(lat = lat, lon = lon, apiKey = apiKey)
+
+        // If response is not empty, create a object
+        if (response.isNotEmpty()) {
+            val geo = response[0]
+            GeoCity(
+                name = geo.name,
+                lat = geo.lat,
+                lon = geo.lon,
+                country = geo.country,
+                state = geo.state
+            )
+        } else {
+            null
+        }
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

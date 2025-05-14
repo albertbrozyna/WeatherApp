@@ -68,12 +68,11 @@ interface WeatherForecastAPI {
 
 }
 
-
 // Classes for fetching multiple cities
 data class GeoCity(
     val name: String,
-    val lat: Double,
-    val lon: Double,
+    val lat: Float,
+    val lon: Float,
     val country: String,
     val state: String? = null
 ) : Serializable
@@ -95,7 +94,8 @@ data class WeatherResponse(
     val visibility: Int,
     val wind: Wind,
     val weather: List<Weather>,
-    val dt: Long
+    val dt: Long,
+    val sys : Sys
 ) : Serializable
 
 data class Main(
@@ -114,6 +114,11 @@ data class Wind(
     val speed: Float, val deg: Int
 ) : Serializable
 
+data class Sys(
+    val sunrise: Long,
+    val sunset: Long
+) : Serializable
+
 
 interface WeatherAPI {
     @GET("data/2.5/weather")
@@ -126,9 +131,20 @@ interface WeatherAPI {
     // Finding by coordinates
     @GET("data/2.5/weather")
     suspend fun getWeatherByCoordinates(
-        @Query("lat") lat: Double,
-        @Query("lon") lon: Double,
+        @Query("lat") lat: Float,
+        @Query("lon") lon: Float,
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric"
     ): WeatherResponse
+
+
+
+    @GET("/geo/1.0/reverse")
+    suspend fun reverseGeocoding(
+        @Query("lat") lat: Float,
+        @Query("lon") lon: Float,
+        @Query("limit") limit: Int = 1,
+        @Query("appid") apiKey: String
+    ): List<GeoCity>
 }
+

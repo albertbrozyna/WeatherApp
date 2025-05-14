@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -109,7 +110,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     val city = remember { mutableStateOf(loadPreference(context, lastWeatherCityKey) ?: "") }
 
     val weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
-    //List of weather for favorite cities
+    // List of weather for favorite cities
     val weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
 
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
@@ -122,8 +123,8 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     //List of cities when we are looking
     var cityList =  remember { mutableStateOf<List<GeoCity>>(emptyList()) }
     var expanded = remember { mutableStateOf(false) }
-    var lat = remember { mutableDoubleStateOf(0.0) }
-    var lon = remember { mutableDoubleStateOf(0.0) }
+    var lat = remember { mutableFloatStateOf(0.0f) }
+    var lon = remember { mutableFloatStateOf(0.0f) }
 
     //Keys
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
@@ -166,7 +167,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     // Fetching weather for city
 
     LaunchedEffect(lat.value,lon.value) {
-        if (lat.value != 0.0 && lon.value != 0.0) {
+        if (lat.floatValue != 0.0f && lon.floatValue != 0.0f) {
             updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
 
             updateWeatherForecast(
@@ -252,7 +253,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                 .padding(16.dp)
         ) {
 
-            CitiesSection(favoriteCities, showFavorites, city, context, reload,expanded)
+            CitiesSection(favoriteCities, showFavorites, context, reload,expanded,city,lat,lon)
 
             //Button to get weather
             Button(
@@ -320,17 +321,21 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
 
 @Composable
 fun CitiesSection(
-    favoriteCities: MutableState<List<String>>,
+    favoriteCities: MutableState<List<GeoCity>>,
     showFavorites: MutableState<Boolean>,
-    city: MutableState<String>,
     context: Context,
     reload: MutableState<Boolean>,
-    expanded: MutableState<Boolean>
+    expanded: MutableState<Boolean>,
+    city: MutableState<String>,
+    lat : MutableState<Float>,
+    lon : MutableState<Float>
 ) {
+    val apiKey =  context.getString(R.string.api_key)
+    val coroutineScope = rememberCoroutineScope()
+
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-
         ) {
         //Favorities list
         if (showFavorites.value) {
@@ -339,7 +344,7 @@ fun CitiesSection(
                 "Favourite cities:", modifier = Modifier.padding(8.dp)
             )
 
-            favoriteCities.value.forEach { cityName ->
+            favoriteCities.value.forEach { cityItem->
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -348,20 +353,25 @@ fun CitiesSection(
 
                     TextButton(
                         //Changing input value to cityName
-                        onClick = { city.value = cityName }) {
+                        onClick = { city.value = cityItem.name }) {
                         Text(
-                            " - $cityName\n",
+                            buildString {
+                                append(" - ${cityItem.name}")
+                                append(" (${cityItem.country}")
+                                cityItem.state?.let { append(", $it") }
+                                append(")")
+                            },
                             modifier = Modifier.padding(start = 8.dp),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            fontSize = 18.sp
+                            textAlign = TextAlign.Start,
+                            maxLines = 2,
+                            fontSize = 16.sp
                         )
                     }
                     //Icon button do delete from favorite list
                     IconButton(
                         onClick = {
                             val updatedList = favoriteCities.value.toMutableList().apply {
-                                remove(cityName)
+                                remove(cityItem)
                             }
 
                             favoriteCities.value = updatedList
@@ -388,7 +398,7 @@ fun CitiesSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            //Textfield to input cities
+            // Text field to input cities
             TextField(
                 value = city.value,
                 onValueChange = { city.value = it },
@@ -406,31 +416,52 @@ fun CitiesSection(
                 singleLine = true
             )
 
-            //Button for adding to favorities
+            // Button for adding to favourites
             IconButton(
                 onClick = {
                     val cityName = city.value.trim()
-                    if (cityName.isNotEmpty()) {
+                    if (cityName.isEmpty()){
+                        return@IconButton
+                    }
 
-                        if (favoriteCities.value.contains(cityName)) {
+                    // Checking if city exists in fav
+                    val existsInFavourites = favoriteCities.value.any { fav ->
+                        fav.lat == lat.value && fav.lon == lon.value
+                    }
+
+                    if (existsInFavourites) {
+                        Toast.makeText(context, "$cityName is already in favourites.", Toast.LENGTH_LONG).show()
+                        return@IconButton
+                    }
+
+                    // Checking if we have a internet connection, if not we can't add a city to fav
+                    if (!isNetworkConnectionAvailable(context)) {
+                        Toast.makeText(context, "No internet connection. Cannot add city.", Toast.LENGTH_LONG).show()
+                        return@IconButton
+                    }
+
+                    coroutineScope.launch {
+                        // Check if lon and lat are correct and city exists
+                        val result = checkIfCityExists(context, lon = lon.value, lat = lat.value)
+
+                        if (result == null) {
                             Toast.makeText(
                                 context,
-                                "$cityName is already in favourites.",
-                                Toast.LENGTH_LONG,
+                                "City not found with those coordinates.",
+                                Toast.LENGTH_LONG
                             ).show()
-                            return@IconButton
+                            return@launch
                         }
 
-                        //Saving favorite cities
+                        // Add city to favorites
                         val updatedList = favoriteCities.value.toMutableList().apply {
-                            add(cityName)
+                            add(result)
                         }
+
                         favoriteCities.value = updatedList
+                        saveFavouriteCities(context, updatedList)
 
-                        saveFavouriteCities(context, favoriteCities.value)
-
-                        Toast.makeText(context, "$cityName added to favourites.", Toast.LENGTH_LONG)
-                            .show()
+                        Toast.makeText(context, "${result.name} added to favourites.", Toast.LENGTH_LONG).show()
                     }
                 },
                 modifier = Modifier
@@ -630,10 +661,10 @@ suspend fun updateWeather(
     city: MutableState<String>,
     weatherResponse: MutableState<WeatherResponse?>,
     error: MutableState<String?>,
-    favoriteCities: MutableState<List<String>>,
+    favoriteCities: MutableState<List<GeoCity>>,
     weatherList: MutableState<List<WeatherResponse>>,
-    lat: MutableState<Double>,          // Added a lat and lot to seraching
-    lon: MutableState<Double>
+    lat: MutableState<Float>,          // Added a lat and lot to seraching
+    lon: MutableState<Float>
 ) {
     val apiKey = context.getString(R.string.api_key)
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
@@ -642,6 +673,8 @@ suspend fun updateWeather(
 
     if (isNetworkConnectionAvailable(context)) {
         isLoading.value = true
+
+        // Fetching weather from internet
         val result = fetchWeatherData(lat = lat.value, lon = lon.value, apiKey = apiKey)
 
         if (result == null) {
@@ -699,8 +732,8 @@ fun ShowFoundCities(
     cities: List<GeoCity>,
     expanded: MutableState<Boolean>,
     selectedCity: MutableState<String>,
-    lat: MutableState<Double>,
-    lon: MutableState<Double>
+    lat: MutableState<Float>,
+    lon: MutableState<Float>
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
 
@@ -728,5 +761,6 @@ fun ShowFoundCities(
         }
     }
 }
+
 
 
