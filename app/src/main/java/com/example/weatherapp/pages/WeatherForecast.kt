@@ -1,4 +1,4 @@
-package com.example.weatherapp
+package com.example.weatherapp.pages
 
 import android.content.Context
 import android.widget.Toast
@@ -39,7 +39,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import kotlinx.coroutines.delay
+import com.example.weatherapp.utils.ForecastWeather
+import com.example.weatherapp.utils.GeoCity
+import com.example.weatherapp.R
+import com.example.weatherapp.utils.CitiesSection
+import com.example.weatherapp.utils.ShowFoundCities
+import com.example.weatherapp.utils.WeatherForecastList
+import com.example.weatherapp.utils.fetchWeatherForecast
+import com.example.weatherapp.utils.checkIfCityExists
+import com.example.weatherapp.utils.convertTemperatureToF
+import com.example.weatherapp.utils.dateWithoutYear
+import com.example.weatherapp.utils.getDayName
+import com.example.weatherapp.utils.getWeatherForecastForFavorites
+import com.example.weatherapp.utils.isNetworkConnectionAvailable
+import com.example.weatherapp.utils.loadFavoriteForecastList
+import com.example.weatherapp.utils.loadFavouriteCities
+import com.example.weatherapp.utils.loadPreferenceJson
+import com.example.weatherapp.utils.loadPreferenceString
+import com.example.weatherapp.utils.saveFavoriteForecastList
+import com.example.weatherapp.utils.savePreferenceJson
+import com.example.weatherapp.utils.saveWeatherForecastData
+import com.example.weatherapp.utils.searchCitiesByName
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
@@ -80,27 +100,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     //Refresh key and interval
 
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
-    val refreshIntervalMinutes = loadPreferenceString(context, refreshTimeKey)?.toIntOrNull() ?: 5L
-
-    //Delay
-    LaunchedEffect(city.value) {
-        val delayTime = (refreshIntervalMinutes.toLong() * 60L * 1000L)
-        while (true) {
-            delay(delayTime)
-            updateWeatherForecast(
-                context,
-                isLoading,
-                city,
-                weatherForecast,
-                error,
-                favoriteCities,
-                weatherForecastList,
-                currentCityShowed,
-                lat,
-                lon
-            )
-        }
-    }
+    val refreshInterval = loadPreferenceString(context, refreshTimeKey)?.toLongOrNull() ?: 5L
 
     //Reloading UI
     val reload = remember { mutableStateOf(false) }

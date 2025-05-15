@@ -1,9 +1,10 @@
-package com.example.weatherapp
+package com.example.weatherapp.utils
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.example.weatherapp.R
 import com.google.gson.Gson
 import java.io.File
 import java.io.FileInputStream
@@ -265,8 +266,6 @@ fun loadFavouriteCities(context: Context): List<GeoCity> {
         emptyList()
     }
 }
-
-
 
 //Getting weather for favorite list
 suspend fun getWeatherForFavorites(favCities: List<GeoCity>, apiKey: String): List<WeatherResponse> {

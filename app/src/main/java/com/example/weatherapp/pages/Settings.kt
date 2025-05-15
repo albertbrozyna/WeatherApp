@@ -1,4 +1,4 @@
-package com.example.weatherapp
+package com.example.weatherapp.pages
 
 import android.content.Context
 import androidx.compose.foundation.layout.Column
@@ -23,6 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.weatherapp.R
+import com.example.weatherapp.utils.loadPreferenceString
+import com.example.weatherapp.utils.savePreferenceString
 
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
@@ -116,7 +119,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         )
 
 
-        val intervals = listOf(2, 5, 10)
+        val intervals = listOf(15,30,150)
 
         Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             intervals.forEach { interval ->
@@ -125,7 +128,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                         refreshInterval.intValue = interval
                         savePreferenceString(context, refreshTimeKey, interval.toString())
                     })
-                Text("$interval min")
+                Text("$interval sec")
 
 
                 if (interval != intervals.last()) {

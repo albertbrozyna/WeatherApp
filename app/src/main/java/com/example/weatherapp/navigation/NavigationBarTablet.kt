@@ -1,4 +1,5 @@
-package com.example.weatherapp
+package com.example.weatherapp.navigation
+
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -11,11 +12,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun BottomNavigationBar(selectedScreen: MutableState<Int>) {
+fun BottomNavigationBarTablet(selectedScreen: MutableState<Int>) {
 
     NavigationBar(
         modifier = Modifier.padding(top = 16.dp),
@@ -31,19 +31,12 @@ fun BottomNavigationBar(selectedScreen: MutableState<Int>) {
             label = { Text("Home") }
 
         )
+
         NavigationBarItem(onClick = { selectedScreen.value = 1 }, icon = {
-            Icon(
-                painter = painterResource(id = R.drawable.baseline_sunny_24),
-                contentDescription = "Weather forecast",
-            )
-        }, selected = selectedScreen.value == 1, label = { Text("Weather forecast") })
-
-
-        NavigationBarItem(onClick = { selectedScreen.value = 2 }, icon = {
             Icon(
                 imageVector = Icons.Default.Settings, contentDescription = "Settings"
             )
 
-        }, selected = selectedScreen.value == 2, label = { Text("Settings") })
+        }, selected = selectedScreen.value == 1, label = { Text("Settings") })
     }
 }

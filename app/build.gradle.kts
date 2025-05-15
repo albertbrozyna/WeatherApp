@@ -40,7 +40,7 @@ android {
 }
 
 dependencies {
-
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation(libs.coil.compose)
     implementation(libs.logging.interceptor)
     implementation(libs.retrofit)
