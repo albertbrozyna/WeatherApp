@@ -465,10 +465,15 @@ suspend fun updateWeatherForecast(
         weatherForecastList.value =
             loadFavoriteForecastList(context, filenameForecast) ?: emptyList()
 
+        // Find if there is a city with this coord
         val cityForecast = weatherForecastList.value.find {
-            it.city.coord.lon.equals(lon.value) && it.city.coord.lat.equals(lat.value)
+            it.city.coord.lon.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP) ==
+                    lon.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP) &&
+                    it.city.coord.lat.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP) ==
+                    lat.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)
         }
 
+        // Updating forecast if we can
         if (cityForecast != null) {
             isLoading.value = true
             weatherForecast.value = cityForecast
