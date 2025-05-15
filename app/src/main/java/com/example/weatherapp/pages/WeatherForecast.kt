@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
@@ -38,10 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.weatherapp.utils.ForecastWeather
 import com.example.weatherapp.utils.GeoCity
 import com.example.weatherapp.R
+import com.example.weatherapp.WeatherViewModel
 import com.example.weatherapp.utils.CitiesSection
 import com.example.weatherapp.utils.ShowFoundCities
 import com.example.weatherapp.utils.WeatherForecastList
@@ -65,6 +68,8 @@ import java.time.LocalTime
 
 @Composable
 fun WeatherForecastScreen(modifier: Modifier = Modifier) {
+    val viewModel: WeatherViewModel = viewModel()
+
     val context: Context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -121,7 +126,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     }
 
     LaunchedEffect(lat.floatValue, lon.floatValue) {
-        if (city.value.isNotEmpty() && lat.floatValue != 0.0f && lon.floatValue != 0.0f) {
+        if (city.value.isNotEmpty()){ // If we are searching a city
 
             updateWeatherForecast(
                 context,
@@ -149,7 +154,33 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         else -> R.drawable.sky
     }
 
-    //Loading started data
+    // Updating weather every time interval
+    DisposableEffect(Unit) {
+        val refreshIntervalSec = refreshInterval * 1000 // To seconds
+        viewModel.startAutoRefreshTimer(context, refreshIntervalSec) {
+            scope.launch {
+
+                updateWeatherForecast(
+                    context,
+                    isLoading,
+                    city,
+                    weatherForecast,
+                    error,
+                    favoriteCities,
+                    weatherForecastList,
+                    currentCityShowed,
+                    lat,
+                    lon
+                )
+            }
+        }
+
+        onDispose {
+            viewModel.pauseAutoRefresh()
+        }
+    }
+
+    // Loading started data
     LaunchedEffect(Unit) {
         updateWeatherForecast(
             context,

@@ -161,7 +161,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
 
     // Updating weather every time interval
     DisposableEffect(Unit) {
-        val refreshIntervalSec = refreshInterval * 1000
+        val refreshIntervalSec = refreshInterval * 1000 // To seconds
         viewModel.startAutoRefreshTimer(context, refreshIntervalSec) {
             coroutineScope.launch {
                 updateWeather(
