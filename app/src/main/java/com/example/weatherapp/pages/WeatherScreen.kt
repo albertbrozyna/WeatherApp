@@ -364,7 +364,12 @@ suspend fun updateWeather(
             loadFavoriteWeatherList(context, favoriteCitiesWeatherFilename) ?: emptyList()
 
         // Find if there is a city with this coord
-        val cityWeather = weatherList.value.find { it.coord.lon.equals(lon.value) && it.coord.lat.equals(lat.value) }
+        val cityWeather = weatherList.value.find {
+            it.coord.lon.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP) ==
+                    lon.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP) &&
+                    it.coord.lat.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP) ==
+                    lat.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)
+        }
 
         // If is saved then load
         if (cityWeather != null) {

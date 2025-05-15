@@ -1,5 +1,6 @@
 package com.example.weatherapp.utils
 
+import com.google.gson.reflect.TypeToken
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
@@ -282,38 +283,37 @@ suspend fun getWeatherForFavorites(favCities: List<GeoCity>, apiKey: String): Li
 }
 
 //To save weather
-fun saveFavoriteWeatherList(
-    context: Context, weatherList: List<WeatherResponse>, filename: String
-) {
-    try {
-        val file = File(context.filesDir, filename)
-        val fileOutputStream = FileOutputStream(file)
-        val objectOutputStream = ObjectOutputStream(fileOutputStream)
 
-        objectOutputStream.writeObject(weatherList)
-        objectOutputStream.close()
+fun saveFavoriteWeatherList(context: Context, weatherList: List<WeatherResponse>, filename: String) {
+    try {
+        val gson = Gson()
+        val json = gson.toJson(weatherList)
+
+        val file = File(context.filesDir, filename)
+        file.writeText(json)
     } catch (e: Exception) {
         e.printStackTrace()
     }
 }
+
 
 
 @Suppress("UNCHECKED_CAST")
 fun loadFavoriteWeatherList(context: Context, filename: String): List<WeatherResponse>? {
-    try {
+    return try {
         val file = File(context.filesDir, filename)
-        if (file.exists()) {
-            val fileInputStream = FileInputStream(file)
-            val objectInputStream = ObjectInputStream(fileInputStream)
-            val list = objectInputStream.readObject() as List<WeatherResponse>
-            objectInputStream.close()
-            return list
-        }
+        if (!file.exists()) return null
+
+        val json = file.readText()
+        val gson = Gson()
+        val type = object : TypeToken<List<WeatherResponse>>() {}.type
+        gson.fromJson(json, type)
     } catch (e: Exception) {
         e.printStackTrace()
+        null
     }
-    return null
 }
+
 
 
 //To save and load forecast
