@@ -103,29 +103,40 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     val context: Context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    // Name where the last city (GeoCity type) is stored
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
-    val city = remember { mutableStateOf(loadPreference(context, lastWeatherCityKey) ?: "") }
+
+    // Loading last city from preferences
+    val lastCityGeoCity = remember {
+        mutableStateOf<GeoCity?>(loadPreferenceJson(context, lastWeatherCityKey))
+    }
+
+    // City in string
+    val city = remember {
+        mutableStateOf(lastCityGeoCity.value?.name ?: "")
+    }
 
     val weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
+
     // List of weather for favorite cities
     val weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
-
+    // List of favourite cities
     val favoriteCities = remember { mutableStateOf(loadFavouriteCities(context)) }
 
     val isLoading = remember { mutableStateOf(false) }
     val showFavorites = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
-    //List of favorite cities
+
 
     //List of cities when we are looking
     var cityList =  remember { mutableStateOf<List<GeoCity>>(emptyList()) }
     var expanded = remember { mutableStateOf(false) }
-    var lat = remember { mutableFloatStateOf(0.0f) }
-    var lon = remember { mutableFloatStateOf(0.0f) }
+    var lat = remember { mutableFloatStateOf(lastCityGeoCity.value?.lat ?: 0.0f) }
+    var lon = remember { mutableFloatStateOf(lastCityGeoCity.value?.lon ?: 0.0f) }
 
     //Keys
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
-    val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 60L
+    val refreshIntervalMinutes = loadPreferenceString(context, refreshTimeKey)?.toIntOrNull() ?: 60L
 
     //For forecast for tablet
 
@@ -135,6 +146,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     val currentCityShowed = remember { mutableStateOf("") }
 
     var unsued = remember { mutableStateOf<Boolean>(false) }
+
     //Delay
     LaunchedEffect(city.value) {
         val delayTime = (refreshIntervalMinutes.toLong() * 60L * 1000L)
@@ -164,9 +176,8 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
     }
 
     // Fetching weather for city
-
     LaunchedEffect(lat.floatValue,lon.floatValue) {
-        if (lat.floatValue != 0.0f && lon.floatValue != 0.0f) {
+        if (city.value.isNotEmpty()){ // If we are searching a city
             updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
 
             updateWeatherForecast(
@@ -184,12 +195,11 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
         }
     }
 
-    //reload functionality to tell if wee need to update UI
+    // Reloading
     val reload = remember { mutableStateOf(false) }
 
     LaunchedEffect(reload.value) {
         updateWeather(context, isLoading, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
-
 
         updateWeatherForecast(
             context,
@@ -432,7 +442,7 @@ fun CitiesSection(
                     }
 
                     if (existsInFavourites) {
-                        Toast.makeText(context, "$cityName is already in favourites.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Current city is already in favourites.", Toast.LENGTH_LONG).show()
                         return@IconButton
                     }
 
@@ -524,8 +534,8 @@ fun WeatherInfo(context: Context, weatherResponse: WeatherResponse) {
     val tempUnitsKey = context.getString(R.string.temp_units_key)
 
     //units preferences
-    val windUnits = loadPreference(context, windUnitsKey) ?: "m/s"
-    val tempUnits = loadPreference(context, tempUnitsKey) ?: "metric"
+    val windUnits = loadPreferenceString(context, windUnitsKey) ?: "m/s"
+    val tempUnits = loadPreferenceString(context, tempUnitsKey) ?: "metric"
 
     Column(
         modifier = Modifier
@@ -673,6 +683,10 @@ suspend fun updateWeather(
     val filenameWeather = context.getString(R.string.last_city_weather_filename)
     val favoriteCitiesWeatherFilename = context.getString(R.string.favorite_cities_weather)
 
+    if(city.value.trim().isEmpty()){   // Is city field is empty exit
+        return
+    }
+
     if (isNetworkConnectionAvailable(context)) {
         isLoading.value = true
 
@@ -687,8 +701,6 @@ suspend fun updateWeather(
         }
 
         isLoading.value = false
-        // Saving preferences
-        savePreference(context, lastWeatherCityKey, city.value)
 
         // Saving weather
         weatherResponse.value?.let {
@@ -708,6 +720,10 @@ suspend fun updateWeather(
             val result = checkIfCityExists(context, lon = lon.value, lat = lat.value)
             if (result != null) { // If exists add it to temp list
                 tempFavCities = favoriteCities.value + result
+
+                // Save this city name as last to preferences
+
+                savePreferenceJson(context, lastWeatherCityKey, result)
             }
         }
 
@@ -727,9 +743,10 @@ suspend fun updateWeather(
         weatherList.value =
             loadFavoriteWeatherList(context, favoriteCitiesWeatherFilename) ?: emptyList()
 
-        val cityWeather = weatherList.value.find { it.name.equals(city.value, ignoreCase = true) }
+        // Find if there is a city with this coord
+        val cityWeather = weatherList.value.find { it.coord.lon.equals(lon.value) && it.coord.lat.equals(lat.value) }
 
-        //If is saved then load
+        // If is saved then load
         if (cityWeather != null) {
             isLoading.value = true
             weatherResponse.value = cityWeather
@@ -764,10 +781,13 @@ fun ShowFoundCities(
                         lon.value = city.lon
                         lat.value = city.lat
                         expanded.value = false
-
-
                     },
-                    text = { Text(city.name + " Country: " + city.country + " State: " + city.state ) }
+                    text = {
+                        Text(
+                            "${city.name} - Country: ${city.country}" +
+                                    (city.state?.let { ", State: $it" } ?: "")
+                        )
+                    }
                 )
             }
         }

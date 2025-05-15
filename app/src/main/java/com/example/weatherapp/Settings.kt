@@ -36,11 +36,11 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     //Refresh time interval default 60 s
     val refreshInterval = remember {
         mutableIntStateOf(
-            loadPreference(context, refreshTimeKey)?.toInt() ?: 5
+            loadPreferenceString(context, refreshTimeKey)?.toInt() ?: 5
         )
     }
-    val windUnits = remember { mutableStateOf(loadPreference(context, windUnitsKey) ?: "mph") }
-    val tempUnits = remember { mutableStateOf(loadPreference(context, tempUnitsKey) ?: "metric") }
+    val windUnits = remember { mutableStateOf(loadPreferenceString(context, windUnitsKey) ?: "mph") }
+    val tempUnits = remember { mutableStateOf(loadPreferenceString(context, tempUnitsKey) ?: "metric") }
 
     val scroll = rememberScrollState()
 
@@ -51,8 +51,6 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             .verticalScroll(scroll),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-
         Text(
             "Select Temperature Unit",
             fontSize = 20.sp,
@@ -60,13 +58,13 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
-        //Temp units select
+        // Temp units select
         Row(modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)) {
             //Metric system
             RadioButton(
                 selected = tempUnits.value == "metric", onClick = {
                     tempUnits.value = "metric"
-                    savePreference(context, tempUnitsKey, "metric")
+                    savePreferenceString(context, tempUnitsKey, "metric")
                 })
             Text("Celsius")
 
@@ -75,7 +73,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             RadioButton(
                 selected = tempUnits.value == "imperial", onClick = {
                     tempUnits.value = "imperial"
-                    savePreference(context, tempUnitsKey, "imperial")
+                    savePreferenceString(context, tempUnitsKey, "imperial")
                 })
             Text("Fahrenheit")
         }
@@ -94,7 +92,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             RadioButton(
                 selected = windUnits.value == "mph", onClick = {
                     windUnits.value = "mph"
-                    savePreference(context, windUnitsKey, "mph")
+                    savePreferenceString(context, windUnitsKey, "mph")
                 })
             Text("mph")
 
@@ -104,12 +102,12 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             RadioButton(
                 selected = windUnits.value == "m/s", onClick = {
                     windUnits.value = "m/s"
-                    savePreference(context, windUnitsKey, "m/s")
+                    savePreferenceString(context, windUnitsKey, "m/s")
                 })
             Text("m/s")
         }
 
-        //Refresh time
+        // Refresh time
         Text(
             "Select Refresh Interval",
             fontSize = 20.sp,
@@ -125,7 +123,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 RadioButton(
                     selected = refreshInterval.intValue == interval, onClick = {
                         refreshInterval.intValue = interval
-                        savePreference(context, refreshTimeKey, interval.toString())
+                        savePreferenceString(context, refreshTimeKey, interval.toString())
                     })
                 Text("$interval min")
 
@@ -136,5 +134,4 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-
 }

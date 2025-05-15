@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import androidx.core.content.edit
 import com.google.gson.Gson
 import java.io.File
 import java.io.FileInputStream
@@ -16,7 +15,7 @@ import java.util.Date
 import java.util.Locale
 
 // function to save preferences
-fun savePreference(context: Context, key: String, city: GeoCity) {
+fun savePreferenceJson(context: Context, key: String, city: GeoCity) {
     val gson = Gson()
     val json = gson.toJson(city) // Serialize GeoCity to JSON
 
@@ -27,7 +26,7 @@ fun savePreference(context: Context, key: String, city: GeoCity) {
 }
 
 // Function to load preferences
-fun loadPreference(context: Context, key: String): GeoCity? {
+fun loadPreferenceJson(context: Context, key: String): GeoCity? {
     val gson = Gson()
     val appName = context.getString(R.string.app_name)
     val sharedPreferences = context.getSharedPreferences(appName, Context.MODE_PRIVATE)
@@ -41,6 +40,25 @@ fun loadPreference(context: Context, key: String): GeoCity? {
     }
 }
 
+// Save preference string
+fun savePreferenceString(context: Context, key: String, preference: String) {
+    val appName = context.getString(R.string.app_name)
+
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences(appName, Context.MODE_PRIVATE)
+
+    sharedPreferences.edit().putString(key, preference).apply()
+}
+
+// Load preference string
+fun loadPreferenceString(context: Context, key: String): String? {
+    val appName = context.getString(R.string.app_name)
+
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences(appName, Context.MODE_PRIVATE)
+
+    return sharedPreferences.getString(key, null)
+}
 
 //Reading forecast data from file
 fun loadWeatherForecastData(context: Context, filename: String): WeatherForecastList? {

@@ -1,7 +1,5 @@
 package com.example.weatherapp
 
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -9,13 +7,6 @@ import retrofit2.http.Query
 import java.io.Serializable
 
 object WeatherApiClient {
-
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
-    }
-
-    private val okHttpClient = OkHttpClient.Builder().addInterceptor(loggingInterceptor).build()
-
     private const val URL = "https://api.openweathermap.org"
 
     val retrofit: Retrofit =
@@ -30,7 +21,7 @@ object WeatherApiClient {
     val weatherForecastAPI: WeatherForecastAPI = retrofit.create(WeatherForecastAPI::class.java)
 }
 
-//Getting forecast for next days
+// Getting forecast for next days
 suspend fun fetchWeatherForecast(lat : Float,lon: Float, apiKey: String): WeatherForecastList? {
     return try {
         val weatherForecastAPI = WeatherApiClient.weatherForecastAPI
@@ -49,7 +40,12 @@ data class WeatherForecastList(
 
 
 data class City(
-    val name: String
+    val name: String,
+    val coord: Coord,
+    val country: String,
+    val timezone: Int,
+    val sunrise: Long,
+    val sunset: Long
 ) : Serializable
 
 data class ForecastWeather(

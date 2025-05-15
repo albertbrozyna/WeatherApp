@@ -49,7 +49,16 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
 
     val lastCityForecastKey = context.getString(R.string.last_city_weather_key)
-    val city = remember { mutableStateOf(loadPreference(context, lastCityForecastKey) ?: "") }
+
+    // Loading last city from preferences
+    val lastCityGeoCity = remember {
+        mutableStateOf<GeoCity?>(loadPreferenceJson(context, lastCityForecastKey))
+    }
+
+    // City in string
+    val city = remember {
+        mutableStateOf(lastCityGeoCity.value?.name ?: "")
+    }
 
     val weatherForecast = remember { mutableStateOf<WeatherForecastList?>(null) }
     val weatherForecastList = remember { mutableStateOf<List<WeatherForecastList>>(emptyList()) }
@@ -58,7 +67,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val showFavorites = remember { mutableStateOf(false) }
 
     //List of cities when we are looking
-    var cityList =  remember { mutableStateOf<List<GeoCity>>(emptyList()) }
+    var cityList = remember { mutableStateOf<List<GeoCity>>(emptyList()) }
     var expanded = remember { mutableStateOf(false) }
     var lat = remember { mutableFloatStateOf(0.0f) }
     var lon = remember { mutableFloatStateOf(0.0f) }
@@ -71,7 +80,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     //Refresh key and interval
 
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
-    val refreshIntervalMinutes = loadPreference(context, refreshTimeKey)?.toIntOrNull() ?: 5L
+    val refreshIntervalMinutes = loadPreferenceString(context, refreshTimeKey)?.toIntOrNull() ?: 5L
 
     //Delay
     LaunchedEffect(city.value) {
@@ -111,7 +120,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         )
     }
 
-    LaunchedEffect(lat.floatValue,lon.floatValue) {
+    LaunchedEffect(lat.floatValue, lon.floatValue) {
         if (city.value.isNotEmpty() && lat.floatValue != 0.0f && lon.floatValue != 0.0f) {
 
             updateWeatherForecast(
@@ -128,7 +137,6 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             )
         }
     }
-
 
 
     // Selecting background depending on a hour
@@ -176,14 +184,15 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 .verticalScroll(scroll),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CitiesSection(favoriteCities, showFavorites,  context, reload,expanded,city,lat,lon)
+            CitiesSection(favoriteCities, showFavorites, context, reload, expanded, city, lat, lon)
 
             //Button to get forecast weather
             Button(
                 onClick = {
                     scope.launch {
                         // Fetch available cities
-                        cityList.value = searchCitiesByName(context = context,cityName = city.value)
+                        cityList.value =
+                            searchCitiesByName(context = context, cityName = city.value)
 
                         // Show menu with cities
                         expanded.value = true
@@ -198,7 +207,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
             }
 
             // Dropdown menu with available cities
-            ShowFoundCities(cityList.value,expanded,city,lat, lon)
+            ShowFoundCities(cityList.value, expanded, city, lat, lon)
 
 
             if (isLoading.value) {
@@ -276,7 +285,7 @@ fun DayView(context: Context, date: String, forecast: ForecastWeather) {
     val tempUnitsKey = context.getString(R.string.temp_units_key)
 
     //units preferences
-    val tempUnits = loadPreference(context, tempUnitsKey) ?: "metric"
+    val tempUnits = loadPreferenceString(context, tempUnitsKey) ?: "metric"
 
     Box(
         modifier = Modifier
@@ -371,69 +380,72 @@ suspend fun updateWeatherForecast(
     val lastCityForecastKey = context.getString(R.string.last_city_weather_key)
     val filenameForecast = context.getString(R.string.last_city_forecast)
 
-    if (city.value.isNotEmpty()) {
-        if (isNetworkConnectionAvailable(context)) {
-            isLoading.value = true
-            val result = fetchWeatherForecast(lat = lat.value, lon = lon.value, apiKey)
+    if (city.value.trim().isEmpty()) {   // Is city field is empty exit
+        return
+    }
 
-            if (result != null) {
-                weatherForecast.value = result
-                currentCityShowed.value = city.value
-                saveWeatherForecastData(context, result, filenameForecast)
-                savePreference(context, lastCityForecastKey, city.value)
-                error.value = null
-            } else {
-                error.value = "City not found"
-            }
-            isLoading.value = false
+    if (isNetworkConnectionAvailable(context)) {    // If connection is available fetch data
+        isLoading.value = true
+        val result = fetchWeatherForecast(lat = lat.value, lon = lon.value, apiKey)
 
+        if (result != null) {
+            weatherForecast.value = result
+            currentCityShowed.value = city.value
+            saveWeatherForecastData(context, result, filenameForecast)
 
-            // Creating a tempFavCities only for fetching weather for the last city
-            var tempFavCities = favoriteCities.value
-
-            // Add current city to favorites, if not exists to store the weather here for the last city
-            val existsInFavourites = favoriteCities.value.any { fav ->
-                fav.lat == lat.value && fav.lon == lon.value
-            }
-
-            if (!existsInFavourites) {   // If don't exists in fav
-
-                val result = checkIfCityExists(context, lon = lon.value, lat = lat.value)
-                if (result != null) { // If exists add it to temp list
-                    tempFavCities = favoriteCities.value + result
-                }
-            }
-
-            //Fetching data for favorite list
-            weatherForecastList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
-
-            //Saving weather
-            saveFavoriteForecastList(context, weatherForecastList.value, filenameForecast)
+            error.value = null
         } else {
-            Toast.makeText(
-                    context,
-                    "No internet connection, displayed data might not be up to date.",
-                    Toast.LENGTH_SHORT
-                ).show()
+            error.value = "City not found"
+        }
+        isLoading.value = false
 
-            //Loading forecast data from file
-            weatherForecastList.value =
-                loadFavoriteForecastList(context, filenameForecast) ?: emptyList()
 
-            val cityForecast = weatherForecastList.value.find {
-                it.city.name.equals(
-                    city.value, ignoreCase = true
-                )
-            }
+        // Creating a tempFavCities only for fetching weather for the last city
+        var tempFavCities = favoriteCities.value
 
-            if (cityForecast != null) {
-                isLoading.value = true
-                weatherForecast.value = cityForecast
-                currentCityShowed.value = city.value
-                isLoading.value = false
+        // Add current city to favorites, if not exists to store the weather here for the last city
+        val existsInFavourites = favoriteCities.value.any { fav ->
+            fav.lat == lat.value && fav.lon == lon.value
+        }
+
+        if (!existsInFavourites) {   // If don't exists in fav
+            val result = checkIfCityExists(context, lon = lon.value, lat = lat.value)
+            if (result != null) { // If exists add it to temp list
+                tempFavCities = favoriteCities.value + result
+
+                // Saving last city as GeoCity
+                savePreferenceJson(context, lastCityForecastKey, result)
             }
         }
+
+        //Fetching data for favorite list
+        weatherForecastList.value = getWeatherForecastForFavorites(tempFavCities, apiKey)
+
+        //Saving weather
+        saveFavoriteForecastList(context, weatherForecastList.value, filenameForecast)
+    } else {
+        Toast.makeText(
+            context,
+            "No internet connection, displayed data might not be up to date.",
+            Toast.LENGTH_SHORT
+        ).show()
+
+        //Loading forecast data from file
+        weatherForecastList.value =
+            loadFavoriteForecastList(context, filenameForecast) ?: emptyList()
+
+        val cityForecast = weatherForecastList.value.find {
+            it.city.coord.lon.equals(lon.value) && it.city.coord.lat.equals(lat.value)
+        }
+
+        if (cityForecast != null) {
+            isLoading.value = true
+            weatherForecast.value = cityForecast
+            currentCityShowed.value = city.value
+            isLoading.value = false
+        }
     }
+
 }
 
 
