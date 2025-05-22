@@ -270,7 +270,7 @@ fun WeatherScreen(modifier: Modifier = Modifier, tablet: Boolean = false) {
                     if (tablet) {
                         Box(modifier = Modifier.weight(1f)) {
                             weatherForecast.value?.let {
-                                WeekDaysForecast(context, "", it)
+                                WeekDaysForecast(context, "", it,true)
                             }
                         }
                     }

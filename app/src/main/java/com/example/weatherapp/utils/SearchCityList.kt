@@ -26,6 +26,16 @@ fun ShowFoundCities(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
+
+            if(cities.isEmpty()){
+                DropdownMenuItem(
+                    onClick = {},
+                    text = {
+                        Text("No cities with this name found")
+                    }
+                )
+            }
+
             cities.forEach { city ->
                 DropdownMenuItem(
                     onClick = {

@@ -259,7 +259,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 }
             } else {
                 weatherForecast.value?.let {
-                    WeekDaysForecast(context, currentCityShowed.value, it)
+                    WeekDaysForecast(context, currentCityShowed.value, it,false)
                 }
             }
 
@@ -274,7 +274,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
 
 
 @Composable
-fun WeekDaysForecast(context: Context, city: String, weatherForecast: WeatherForecastList) {
+fun WeekDaysForecast(context: Context, city: String, weatherForecast: WeatherForecastList,isTablet : Boolean) {
     val selectedDates =
         weatherForecast.list.filter { it.dt_txt.contains(context.getString(R.string.forecast_hour)) }
             .groupBy { it.dt_txt.substring(0, 10) }.toList().take(7)
@@ -284,14 +284,17 @@ fun WeekDaysForecast(context: Context, city: String, weatherForecast: WeatherFor
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        //City name
-        Text(
-            text = weatherForecast.city.name,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold
-        )
+        // City name
+
+        if(!isTablet){  // If not tablet show
+            Text(
+                text = weatherForecast.city.name,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
