@@ -48,6 +48,7 @@ import com.example.weatherapp.WeatherViewModel
 import com.example.weatherapp.utils.CitiesSection
 import com.example.weatherapp.utils.ShowFoundCities
 import com.example.weatherapp.utils.WeatherForecastList
+import com.example.weatherapp.utils.WeatherResponse
 import com.example.weatherapp.utils.fetchWeatherForecast
 import com.example.weatherapp.utils.checkIfCityExists
 import com.example.weatherapp.utils.convertTemperatureToF
@@ -61,7 +62,6 @@ import com.example.weatherapp.utils.loadPreferenceJson
 import com.example.weatherapp.utils.loadPreferenceString
 import com.example.weatherapp.utils.saveFavoriteForecastList
 import com.example.weatherapp.utils.savePreferenceJson
-import com.example.weatherapp.utils.saveWeatherForecastData
 import com.example.weatherapp.utils.searchCitiesByName
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -94,14 +94,16 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     //List of cities when we are looking
     var cityList = remember { mutableStateOf<List<GeoCity>>(emptyList()) }
     var expanded = remember { mutableStateOf(false) }
-    var lat = remember { mutableFloatStateOf(0.0f) }
-    var lon = remember { mutableFloatStateOf(0.0f) }
+    var lat = remember { mutableFloatStateOf(lastCityGeoCity.value?.lat ?: 0.0f) }
+    var lon = remember { mutableFloatStateOf(lastCityGeoCity.value?.lon ?: 0.0f) }
+    val weatherResponse = remember { mutableStateOf<WeatherResponse?>(null) }
+    val weatherList = remember { mutableStateOf<List<WeatherResponse>>(emptyList()) }
 
     val isLoading = remember { mutableStateOf(false) }
     val error = remember { mutableStateOf<String?>(null) }
 
     val currentCityShowed = remember { mutableStateOf("") }
-
+    var unused = remember { mutableStateOf<Boolean>(false) }
     //Refresh key and interval
 
     val refreshTimeKey = context.getString(R.string.refresh_time_key)
@@ -111,6 +113,8 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
     val reload = remember { mutableStateOf(false) }
 
     LaunchedEffect(reload.value) {
+        updateWeather(context, unused, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
+
         updateWeatherForecast(
             context,
             isLoading,
@@ -127,6 +131,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
 
     LaunchedEffect(lat.floatValue, lon.floatValue) {
         if (city.value.isNotEmpty()){ // If we are searching a city
+            updateWeather(context, unused, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
 
             updateWeatherForecast(
                 context,
@@ -159,6 +164,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
         val refreshIntervalSec = refreshInterval * 1000 // To seconds
         viewModel.startAutoRefreshTimer(context, refreshIntervalSec) {
             scope.launch {
+                updateWeather(context, unused, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
 
                 updateWeatherForecast(
                     context,
@@ -182,6 +188,8 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
 
     // Loading started data
     LaunchedEffect(Unit) {
+        updateWeather(context, unused, city, weatherResponse, error, favoriteCities, weatherList,lat,lon)
+
         updateWeatherForecast(
             context,
             isLoading,
@@ -255,7 +263,7 @@ fun WeatherForecastScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            //Error message
+            // Error message
             error.value?.let {
                 Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             }
@@ -278,7 +286,7 @@ fun WeekDaysForecast(context: Context, city: String, weatherForecast: WeatherFor
 
         //City name
         Text(
-            text = city,
+            text = weatherForecast.city.name,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
             fontSize = 40.sp,
@@ -422,8 +430,6 @@ suspend fun updateWeatherForecast(
         if (result != null) {
             weatherForecast.value = result
             currentCityShowed.value = city.value
-            saveWeatherForecastData(context, result, filenameForecast)
-
             error.value = null
         } else {
             error.value = "City not found"
@@ -479,6 +485,16 @@ suspend fun updateWeatherForecast(
             weatherForecast.value = cityForecast
             currentCityShowed.value = city.value
             isLoading.value = false
+
+
+            val matchedCity = favoriteCities.value.find  { fav ->
+                fav.lat.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)  == lat.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)
+                && fav.lon.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)== lon.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)
+            }
+
+            if (matchedCity != null) {
+                savePreferenceJson(context, lastCityForecastKey, matchedCity)   // Save last city from fav list as last city
+            }
         }
     }
 

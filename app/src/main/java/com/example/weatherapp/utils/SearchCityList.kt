@@ -23,10 +23,9 @@ fun ShowFoundCities(
             expanded = expanded.value,
             onDismissRequest = {
                 expanded.value = false
-            }, // Dismiss the dropdown when clicking outside
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
-            // For each city in the city list, create a DropdownMenuItem
             cities.forEach { city ->
                 DropdownMenuItem(
                     onClick = {

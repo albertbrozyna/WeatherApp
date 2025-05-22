@@ -51,7 +51,6 @@ import com.example.weatherapp.utils.loadPreferenceJson
 import com.example.weatherapp.utils.loadPreferenceString
 import com.example.weatherapp.utils.saveFavoriteWeatherList
 import com.example.weatherapp.utils.savePreferenceJson
-import com.example.weatherapp.utils.saveWeatherData
 import com.example.weatherapp.utils.searchCitiesByName
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -300,7 +299,6 @@ suspend fun updateWeather(
 ) {
     val apiKey = context.getString(R.string.api_key)
     val lastWeatherCityKey = context.getString(R.string.last_city_weather_key)
-    val filenameWeather = context.getString(R.string.last_city_weather_filename)
     val favoriteCitiesWeatherFilename = context.getString(R.string.favorite_cities_weather)
 
     if(city.value.trim().isEmpty()){   // Is city field is empty exit
@@ -322,10 +320,6 @@ suspend fun updateWeather(
 
         isLoading.value = false
 
-        // Saving weather
-        weatherResponse.value?.let {
-            saveWeatherData(context, it, filenameWeather)
-        }
 
         // Creating a tempFavCities only for fetching weather for the last city
         var tempFavCities = favoriteCities.value
@@ -350,7 +344,7 @@ suspend fun updateWeather(
         //Fetching data for favorite list
         weatherList.value = getWeatherForFavorites(tempFavCities, apiKey)
 
-        //Saving weather
+        // Saving weather
         saveFavoriteWeatherList(context, weatherList.value, favoriteCitiesWeatherFilename)
     } else {
         Toast.makeText(
@@ -376,6 +370,15 @@ suspend fun updateWeather(
             isLoading.value = true
             weatherResponse.value = cityWeather
             isLoading.value = false
+
+            val matchedCity = favoriteCities.value.find  { fav ->
+                fav.lat.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)  == lat.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)
+                && fav.lon.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)== lon.value.toBigDecimal().setScale(4, java.math.RoundingMode.HALF_UP)
+            }
+
+            if (matchedCity != null) {
+                savePreferenceJson(context, lastWeatherCityKey, matchedCity)
+            }
         }
     }
 }

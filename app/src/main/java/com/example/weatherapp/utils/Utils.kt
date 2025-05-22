@@ -15,6 +15,7 @@ import java.io.ObjectOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.content.edit
 
 // function to save preferences
 fun savePreferenceJson(context: Context, key: String, city: GeoCity) {
@@ -24,7 +25,7 @@ fun savePreferenceJson(context: Context, key: String, city: GeoCity) {
     val appName = context.getString(R.string.app_name)
     val sharedPreferences = context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
-    sharedPreferences.edit().putString(key, json).apply()
+    sharedPreferences.edit { putString(key, json) }
 }
 
 // Function to load preferences
@@ -49,7 +50,7 @@ fun savePreferenceString(context: Context, key: String, preference: String) {
     val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
-    sharedPreferences.edit().putString(key, preference).apply()
+    sharedPreferences.edit { putString(key, preference) }
 }
 
 // Load preference string
@@ -60,45 +61,6 @@ fun loadPreferenceString(context: Context, key: String): String? {
         context.getSharedPreferences(appName, Context.MODE_PRIVATE)
 
     return sharedPreferences.getString(key, null)
-}
-
-//Reading forecast data from file
-fun loadWeatherForecastData(context: Context, filename: String): WeatherForecastList? {
-
-    try {
-        val file = File(context.filesDir, filename)
-
-        if (file.exists()) {
-            val fileInputStream = FileInputStream(file)
-            val objectInputStream = ObjectInputStream(fileInputStream)
-            val weatherForecast = objectInputStream.readObject() as WeatherForecastList
-            objectInputStream.close()
-            return weatherForecast
-
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return null
-}
-
-// Saving forecast data to file
-fun saveWeatherForecastData(
-    context: Context, weatherForecast: WeatherForecastList, filename: String
-) {
-    try {
-        val file = File(context.filesDir, filename)
-
-        val fileOutputStream = FileOutputStream(file)
-
-        val objectOutputStream = ObjectOutputStream(fileOutputStream)
-
-        objectOutputStream.writeObject(weatherForecast)
-        objectOutputStream.close()
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
 }
 
 
@@ -187,40 +149,7 @@ fun isNetworkConnectionAvailable(context: Context): Boolean {
 
 }
 
-fun saveWeatherData(context: Context, weatherResponse: WeatherResponse, filename: String) {
-    try {
-        val file = File(context.filesDir, filename)
 
-        val fileOutputStream = FileOutputStream(file)
-
-        val objectOutputStream = ObjectOutputStream(fileOutputStream)
-
-        objectOutputStream.writeObject(weatherResponse)
-        objectOutputStream.close()
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
-
-fun loadWeatherData(context: Context, filename: String): WeatherResponse? {
-
-    try {
-        val file = File(context.filesDir, filename)
-
-        if (file.exists()) {
-            val fileInputStream = FileInputStream(file)
-            val objectInputStream = ObjectInputStream(fileInputStream)
-            val weatherResponse = objectInputStream.readObject() as WeatherResponse
-            objectInputStream.close()
-            return weatherResponse
-
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return null
-}
 
 fun saveFavouriteCities(context: Context, cities: List<GeoCity>) {
     try {
